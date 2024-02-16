@@ -1,0 +1,19 @@
+{
+  "name": "schematic",
+  "version": "0.0.1",
+  "description": "Schematic is a schema validator and transformer",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@git-ssh.andrewburgess.io:andrewburgess/schematic"
+  },
+  "keywords": [
+    "validator",
+    "transformer"
+  ],
+  "author": "Andrew Burgess <andrew@andrewburgess.io>",
+  "license": "MIT"
+}
