@@ -1,6 +1,6 @@
 import { ValidationError } from "./errors"
 import { AnySchematic, InferObjectShape, ObjectShape, Schematic } from "./schematic"
-import { AllowUnknownSymbol, ShapeKeysSymbol, StripUnknown } from "./symbols"
+import { AllowUnknownSymbol, KeySignatureSymbol, ShapeKeysSymbol, StripUnknown } from "./symbols"
 
 export type ObjectSchematicOptions<T extends ObjectShape> = {
     allowUnknown?: boolean
@@ -9,6 +9,7 @@ export type ObjectSchematicOptions<T extends ObjectShape> = {
 
 export class ObjectSchematic<T extends ObjectShape> extends Schematic<InferObjectShape<T>> {
     private [AllowUnknownSymbol]: boolean = false
+    private [KeySignatureSymbol]: AnySchematic | undefined
     private [ShapeKeysSymbol]: string[]
     private [StripUnknown]: boolean = true
 
@@ -19,6 +20,7 @@ export class ObjectSchematic<T extends ObjectShape> extends Schematic<InferObjec
         super()
 
         this[AllowUnknownSymbol] = options?.allowUnknown ?? false
+        this[KeySignatureSymbol] = this.shape[KeySignatureSymbol]
         this[ShapeKeysSymbol] = Object.keys(this.shape)
         this[StripUnknown] = this[AllowUnknownSymbol] ? false : options?.stripUnknown ?? true
 
@@ -38,10 +40,12 @@ export class ObjectSchematic<T extends ObjectShape> extends Schematic<InferObjec
         const allowUnknown = parseOptions.allowUnknown ?? this[AllowUnknownSymbol]
         const keys: string[] = this[ShapeKeysSymbol]
         const stripUnknown = parseOptions.stripUnknown ?? this[StripUnknown]
-        const unknownKeys = Object.keys(value).filter((key) => !keys.includes(key))
 
-        if (!allowUnknown && !stripUnknown && unknownKeys.length > 0) {
-            throw this.raiseParseError(`unexpected keys: ${unknownKeys.join(", ")}`)
+        if (!allowUnknown && !stripUnknown && !this[KeySignatureSymbol]) {
+            const unknownKeys = Object.keys(value).filter((key) => !keys.includes(key))
+            if (unknownKeys.length > 0) {
+                throw this.raiseParseError(`unexpected keys: ${unknownKeys.join(", ")}`)
+            }
         }
 
         const result: any = {}
@@ -63,10 +67,29 @@ export class ObjectSchematic<T extends ObjectShape> extends Schematic<InferObjec
             })
         )
 
-        if (!stripUnknown && allowUnknown) {
-            unknownKeys.forEach((key) => {
-                result[key] = (value as any)[key]
-            })
+        if ((!stripUnknown && allowUnknown) || this[KeySignatureSymbol]) {
+            const remainingKeys = Object.keys(value).filter((key) => !keys.includes(key))
+            await Promise.allSettled(
+                remainingKeys.map(async (key) => {
+                    if (!this[KeySignatureSymbol]) {
+                        result[key] = (value as any)[key]
+                        return
+                    }
+
+                    const schematic = this[KeySignatureSymbol] as AnySchematic
+                    const rawValue = (value as any)[key]
+
+                    try {
+                        result[key] = await schematic.parse(rawValue)
+                    } catch (error) {
+                        if (error instanceof ValidationError) {
+                            throw this.raiseParseError(`error parsing '${key}': ${error.message}`)
+                        }
+
+                        throw error
+                    }
+                })
+            )
         }
 
         return result

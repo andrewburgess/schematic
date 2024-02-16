@@ -1,8 +1,10 @@
 import { ValidationError } from "./errors"
+import { KeySignatureSymbol } from "./symbols"
 
 export type AnySchematic = Schematic<any>
 export type ObjectShape = {
     [key: string]: AnySchematic
+    [KeySignatureSymbol]?: AnySchematic
 }
 
 export type Infer<T> = T extends AnySchematic ? (T extends Schematic<infer U> ? U : any) : T
