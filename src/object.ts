@@ -14,7 +14,7 @@ export class ObjectSchematic<T extends ObjectShape> extends Schematic<InferObjec
     private [StripUnknown]: boolean = true
 
     constructor(
-        private readonly shape: T,
+        readonly shape: T,
         options?: ObjectSchematicOptions<T>
     ) {
         super()
@@ -23,8 +23,6 @@ export class ObjectSchematic<T extends ObjectShape> extends Schematic<InferObjec
         this[KeySignatureSymbol] = this.shape[KeySignatureSymbol]
         this[ShapeKeysSymbol] = Object.keys(this.shape)
         this[StripUnknown] = this[AllowUnknownSymbol] ? false : options?.stripUnknown ?? true
-
-        return this
     }
 
     public async parse(

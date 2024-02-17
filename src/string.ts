@@ -1,10 +1,10 @@
 import { Schematic } from "./schematic"
 
 export class StringSchematic extends Schematic<string> {
+    private validators: Array<(value: string) => void> = []
+
     constructor() {
         super()
-
-        return this
     }
 
     public async parse(value: unknown): Promise<string> {
@@ -14,6 +14,38 @@ export class StringSchematic extends Schematic<string> {
             )
         }
 
+        for (const validator of this.validators) {
+            validator(value)
+        }
+
         return value
+    }
+
+    public min(min: number): this {
+        this.addValidator((value) => {
+            if (value.length < min) {
+                throw this.raiseParseError(
+                    `expected value to be at least ${min} characters long but got ${value.length}`
+                )
+            }
+        })
+
+        return this
+    }
+
+    public regex(regex: RegExp): this {
+        this.addValidator((value) => {
+            if (!regex.test(value)) {
+                throw this.raiseParseError(
+                    `expected value to match regex '${regex}' but got '${value}'`
+                )
+            }
+        })
+
+        return this
+    }
+
+    protected addValidator(validator: (value: string) => void): void {
+        this.validators.push(validator)
     }
 }
