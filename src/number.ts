@@ -1,4 +1,5 @@
-import { Schematic } from "./schematic"
+import { IntersectionSchematic } from "./intersection"
+import { AnySchematic, Schematic } from "./schematic"
 
 export class NumberSchematic extends Schematic<number> {
     constructor() {
@@ -13,5 +14,9 @@ export class NumberSchematic extends Schematic<number> {
         }
 
         return value
+    }
+
+    public and<U extends AnySchematic>(schema: U): IntersectionSchematic<this, U> {
+        return new IntersectionSchematic(this, schema)
     }
 }

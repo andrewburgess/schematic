@@ -1,11 +1,12 @@
-import { Schematic } from "./schematic"
+import { IntersectionSchematic } from "./intersection"
+import { AnySchematic, Schematic } from "./schematic"
 
 export type EnumLike = {
     [Key: string]: string | number
     [Number: number]: string
 }
 
-export class EnumType<T extends EnumLike> extends Schematic<T[keyof T]> {
+export class EnumSchematic<T extends EnumLike> extends Schematic<T[keyof T]> {
     private values: T[keyof T][] = []
 
     constructor(enumeration: T) {
@@ -22,5 +23,9 @@ export class EnumType<T extends EnumLike> extends Schematic<T[keyof T]> {
         }
 
         return value as T[keyof T]
+    }
+
+    public and<U extends AnySchematic>(schema: U): IntersectionSchematic<this, U> {
+        return new IntersectionSchematic(this, schema)
     }
 }

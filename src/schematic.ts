@@ -1,8 +1,9 @@
 import { ValidationError } from "./errors"
+import { IntersectionSchematic } from "./intersection"
 import { KeySignatureSymbol } from "./symbols"
 
 type Eval<T> = T extends any[] | Date | unknown ? T : Flat<T>
-type Flat<T> = T extends {} ? (T extends Date ? T : { [key in keyof T]: T[key] }) : T
+export type Flat<T> = T extends {} ? (T extends Date ? T : { [key in keyof T]: T[key] }) : T
 type InferKeySignature<T extends ObjectShape> = T extends { [KeySignatureSymbol]: AnySchematic }
     ? T extends { [KeySignatureSymbol]: infer KeySig }
         ? KeySig extends AnySchematic
@@ -10,10 +11,6 @@ type InferKeySignature<T extends ObjectShape> = T extends { [KeySignatureSymbol]
             : {}
         : {}
     : {}
-type OptionalKeys<T extends ObjectShape> = {
-    [key in keyof T]: undefined extends Infer<T[key]> ? (key extends symbol ? never : key) : never
-}[keyof T]
-type RequiredKeys<T extends ObjectShape> = Exclude<string & keyof T, OptionalKeys<T>>
 
 export type AnySchematic = Schematic<any>
 export type ObjectShape = {
@@ -25,12 +22,16 @@ export type Infer<T> = T extends AnySchematic ? (T extends Schematic<infer K> ? 
 export type InferObjectShape<T extends ObjectShape> = Flat<
     Eval<
         InferKeySignature<T> & {
-            [key in OptionalKeys<T>]?: T[key] extends Schematic<infer K> ? K : any
-        } & {
-            [key in RequiredKeys<T>]: T[key] extends Schematic<infer K> ? K : any
+            [key in keyof Omit<T, typeof KeySignatureSymbol>]: T[key] extends Schematic<infer U>
+                ? U
+                : never
         }
     >
 >
+
+export interface Defaultable<T> {
+    default(value: T | (() => T)): any
+}
 
 function clone<T>(value: T): T {
     if (typeof value !== "object" || value === null) {
@@ -53,6 +54,7 @@ function clone<T>(value: T): T {
 export abstract class Schematic<T> {
     constructor() {}
 
+    public abstract and<K extends AnySchematic>(schema: K): any
     public abstract parse(value: unknown): Promise<T>
 
     public nullable(this: OptionalSchematic<any>): OptionalSchematic<this>
@@ -85,6 +87,10 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
         super()
     }
 
+    public and<U extends AnySchematic>(schema: U): IntersectionSchematic<this, U> {
+        return new IntersectionSchematic(this, schema)
+    }
+
     public async parse(value: unknown): Promise<Infer<T> | null> {
         if (value === null) {
             return null
@@ -97,6 +103,10 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
 export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T> | undefined> {
     constructor(readonly schematic: T) {
         super()
+    }
+
+    public and<U extends AnySchematic>(schema: U): IntersectionSchematic<this, U> {
+        return new IntersectionSchematic(this, schema)
     }
 
     public async parse(value: unknown): Promise<Infer<T> | undefined> {

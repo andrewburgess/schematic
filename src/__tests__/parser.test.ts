@@ -3,6 +3,39 @@ import { describe, expect, test } from "@jest/globals"
 import * as schematic from "../"
 import { ValidationError } from "../errors"
 
+describe("boolean", () => {
+    test("parse boolean", async () => {
+        const schema = schematic.boolean()
+        const result = await schema.parse(true)
+        expect(result).toBe(true)
+    })
+
+    test("boolean should reject invalid value", async () => {
+        const schema = schematic.boolean()
+        try {
+            await schema.parse(1)
+        } catch (error) {
+            if (error instanceof ValidationError) {
+                expect(error.message).toEqual(
+                    "expected value to be of type 'boolean' but got 'number'"
+                )
+            }
+        }
+    })
+
+    test("can intersect with another schema", async () => {
+        const schema = schematic.boolean().and(schematic.boolean())
+        const result = await schema.parse(true)
+        expect(result).toBe(true)
+    })
+
+    test("can set a default value", async () => {
+        const schema = schematic.boolean().default(true)
+        const result = await schema.parse(undefined)
+        expect(result).toBe(true)
+    })
+})
+
 describe("number", () => {
     test("parse number", async () => {
         const schema = schematic.number()
@@ -70,6 +103,31 @@ describe("object", () => {
 
         expect(result.age).toBe(17)
         expect((result as any).name).toBe("John")
+    })
+
+    test("combine objects with and", async () => {
+        const nameSchema = schematic.object({
+            /**
+             * Name of the person
+             */
+            name: schematic.string()
+        })
+        const ageSchema = schematic.object({
+            /**
+             * How old the person is
+             */
+            age: schematic.number()
+        })
+
+        const schema = nameSchema.and(ageSchema)
+
+        const result = await schema.parse({
+            age: 17,
+            name: "John"
+        })
+
+        expect(result.age).toBe(17)
+        expect(result.name).toBe("John")
     })
 })
 

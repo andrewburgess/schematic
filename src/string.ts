@@ -1,4 +1,5 @@
-import { Schematic } from "./schematic"
+import { IntersectionSchematic } from "./intersection"
+import { AnySchematic, Schematic } from "./schematic"
 
 export class StringSchematic extends Schematic<string> {
     private validators: Array<(value: string) => void> = []
@@ -19,6 +20,10 @@ export class StringSchematic extends Schematic<string> {
         }
 
         return value
+    }
+
+    public and<U extends AnySchematic>(schema: U): IntersectionSchematic<this, U> {
+        return new IntersectionSchematic(this, schema)
     }
 
     public min(min: number): this {
