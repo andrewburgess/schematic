@@ -1,5 +1,0 @@
-export const AllowUnknownSymbol = Symbol("allowUnknown")
-export const KeySignatureSymbol = Symbol("keySignature")
-export const ValueSignatureSymbol = Symbol("valueSignature")
-export const ShapeKeysSymbol = Symbol("shapeKeys")
-export const StripUnknown = Symbol("stripUnknown")

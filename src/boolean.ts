@@ -1,34 +1,26 @@
-import { IntersectionSchematic } from "./intersection"
-import { AnySchematic, Defaultable, Schematic } from "./schematic"
-import { clone } from "./utils"
+import { Schematic } from "./schematic"
+import { SchematicContext, SchematicErrorType, SchematicParseResult } from "./types"
 
-export class BooleanSchematic extends Schematic<boolean> implements Defaultable<boolean> {
-    constructor(private defaultValue?: boolean | (() => boolean)) {
+export class BooleanSchematic extends Schematic<boolean> {
+    constructor() {
         super()
     }
 
-    public async parse(
-        value: unknown = typeof this.defaultValue === "function"
-            ? this.defaultValue()
-            : this.defaultValue
-    ): Promise<boolean> {
+    public async parseType(
+        value: unknown,
+        context: SchematicContext
+    ): Promise<SchematicParseResult<boolean>> {
         if (typeof value !== "boolean") {
-            throw this.raiseParseError(
-                `expected value to be of type 'boolean' but got '${typeof value}'`
-            )
+            return this.createSchematicError({
+                message: `Expected a boolean but received a ${typeof value}`,
+                path: context.path,
+                type: SchematicErrorType.InvalidType
+            })
         }
 
-        return value
-    }
-
-    public and<U extends AnySchematic>(schema: U): IntersectionSchematic<this, U> {
-        return new IntersectionSchematic(this, schema)
-    }
-
-    public default(value: boolean | (() => boolean)): BooleanSchematic {
-        const copy = clone(this)
-        copy.defaultValue = value
-
-        return copy
+        return {
+            isValid: true,
+            value
+        }
     }
 }

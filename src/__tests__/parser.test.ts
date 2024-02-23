@@ -1,161 +1,141 @@
 import { describe, expect, test } from "@jest/globals"
 
+import { SchematicErrorType, type Infer } from "../types"
+
+import { assertEqual } from "../util"
+import { SchematicParseError } from "../error"
 import * as schematic from "../"
-import { ValidationError } from "../errors"
+import { UnknownKeys } from "../object"
 
 describe("boolean", () => {
-    test("parse boolean", async () => {
+    test("type inference should be correct", () => {
         const schema = schematic.boolean()
-        const result = await schema.parse(true)
-        expect(result).toBe(true)
+
+        assertEqual<Infer<typeof schema>, boolean>(true)
     })
 
-    test("boolean should reject invalid value", async () => {
+    test("should parse a boolean value", async () => {
         const schema = schematic.boolean()
+
+        const result = await schema.parse(true)
+
+        await expect(result).toBe(true)
+    })
+
+    test("should throw an error if the value is not a boolean", async () => {
+        const schema = schematic.boolean()
+
         try {
-            await schema.parse(1)
+            await schema.parse("true")
+            expect(true).toBe(false)
         } catch (error) {
-            if (error instanceof ValidationError) {
-                expect(error.message).toEqual(
-                    "expected value to be of type 'boolean' but got 'number'"
-                )
-            }
+            expect(error).toBeInstanceOf(SchematicParseError)
+            const verifyError = error as SchematicParseError
+            expect(verifyError.errors).toHaveLength(1)
+            expect(verifyError.errors[0].type).toEqual(SchematicErrorType.InvalidType)
         }
-    })
-
-    test("can intersect with another schema", async () => {
-        const schema = schematic.boolean().and(schematic.boolean())
-        const result = await schema.parse(true)
-        expect(result).toBe(true)
-    })
-
-    test("can set a default value", async () => {
-        const schema = schematic.boolean().default(true)
-        const result = await schema.parse(undefined)
-        expect(result).toBe(true)
-    })
-})
-
-describe("number", () => {
-    test("parse number", async () => {
-        const schema = schematic.number()
-        const result = await schema.parse(10)
-        expect(result).toBe(10)
     })
 })
 
 describe("object", () => {
-    test("parse an object", async () => {
+    it("should parse an object", async () => {
         const schema = schematic.object({
-            /**
-             * How old the person is
-             */
-            age: schematic.number(),
-            /**
-             * Name of the person
-             */
-            name: schematic.string(),
-
-            address: schematic.object({
-                street: schematic.string()
+            isValid: schematic.boolean(),
+            nested: schematic.object({
+                isError: schematic.boolean()
             })
         })
 
         const result = await schema.parse({
-            age: 17,
-            name: "John",
-            address: {
-                street: "123 Fake St"
+            isValid: true,
+            nested: {
+                isError: false
             }
         })
 
-        expect(result.name).toBe("John")
-        expect(result.age).toBe(17)
-        expect(result.address.street).toBe("123 Fake St")
+        expect(result).toEqual({
+            isValid: true,
+            nested: {
+                isError: false
+            }
+        })
     })
 
-    test("strip unknown keys", async () => {
+    it('should allow unknown keys if "unknownKeys" is set to "allow"', async () => {
         const schema = schematic.object({
-            age: schematic.number()
+            isValid: schematic.boolean(),
+            nested: schematic.object(
+                {
+                    isError: schematic.boolean()
+                },
+                {
+                    unknownKeys: UnknownKeys.Allow
+                }
+            )
         })
 
         const result = await schema.parse({
-            age: 17,
-            name: "John"
+            isValid: true,
+            nested: {
+                isError: false,
+                extra: "key"
+            }
         })
 
-        expect(result.age).toBe(17)
-        expect("name" in result).toBe(false)
+        expect(result).toEqual({
+            isValid: true,
+            nested: {
+                isError: false,
+                extra: "key"
+            }
+        })
     })
 
-    test("allow unknown keys", async () => {
+    it('should reject unknown keys if "unknownKeys" is set to "reject"', async () => {
         const schema = schematic.object(
             {
-                age: schematic.number()
+                isValid: schematic.boolean()
             },
-            { allowUnknown: true }
+            {
+                unknownKeys: UnknownKeys.Reject
+            }
         )
 
-        const result = await schema.parse({
-            age: 17,
-            name: "John"
-        })
-
-        expect(result.age).toBe(17)
-        expect((result as any).name).toBe("John")
-    })
-
-    test("combine objects with and", async () => {
-        const nameSchema = schematic.object({
-            /**
-             * Name of the person
-             */
-            name: schematic.string()
-        })
-        const ageSchema = schematic.object({
-            /**
-             * How old the person is
-             */
-            age: schematic.number()
-        })
-
-        const schema = nameSchema.and(ageSchema)
-
-        const result = await schema.parse({
-            age: 17,
-            name: "John"
-        })
-
-        expect(result.age).toBe(17)
-        expect(result.name).toBe("John")
-    })
-})
-
-describe("record", () => {
-    test("parse record", async () => {
-        const schema = schematic.record(schematic.string(), schematic.number())
-        const result = await schema.parse({ "1": 1, "2": 2 })
-        expect(result).toEqual({ "1": 1, "2": 2 })
-    })
-
-    test("record should reject invalid value", async () => {
-        const schema = schematic.record(schematic.string(), schematic.number())
         try {
-            await schema.parse({ "1": "1", "2": 2 })
+            await schema.parse({
+                isValid: true,
+                extra: "key"
+            })
+            expect(true).toBe(false)
         } catch (error) {
-            if (error instanceof ValidationError) {
-                expect(error.message).toBe(
-                    "error parsing '1': expected value to be of type 'number' but got 'string'"
-                )
-            }
+            expect(error).toBeInstanceOf(SchematicParseError)
+            const verifyError = error as SchematicParseError
+            expect(verifyError.errors).toHaveLength(1)
+            expect(verifyError.errors[0].type).toEqual(SchematicErrorType.UnrecognizedKey)
         }
     })
-})
 
-describe("string", () => {
-    test("parse string", async () => {
-        const schema = schematic.string()
-        const result = await schema.parse("hello")
-        expect(result).toBe("hello")
+    it("should throw an error if the value is not an object", async () => {
+        const schema = schematic.object({
+            isValid: schematic.boolean(),
+            nested: schematic.object({
+                isError: schematic.boolean()
+            })
+        })
+
+        try {
+            await schema.parse({
+                isValid: true,
+                nested: {
+                    isError: "false"
+                }
+            })
+            expect(true).toBe(false)
+        } catch (error) {
+            expect(error).toBeInstanceOf(SchematicParseError)
+            const verifyError = error as SchematicParseError
+            expect(verifyError.errors).toHaveLength(1)
+            expect(verifyError.errors[0].type).toEqual(SchematicErrorType.InvalidType)
+        }
     })
 })
