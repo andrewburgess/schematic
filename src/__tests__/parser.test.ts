@@ -4,8 +4,8 @@ import { SchematicErrorType, type Infer } from "../types"
 
 import { assertEqual } from "../util"
 import { SchematicParseError } from "../error"
-import * as schematic from "../"
 import { UnknownKeys } from "../object"
+import * as schematic from "../"
 
 describe("boolean", () => {
     test("type inference should be correct", () => {
@@ -34,6 +34,22 @@ describe("boolean", () => {
             expect(verifyError.errors).toHaveLength(1)
             expect(verifyError.errors[0].type).toEqual(SchematicErrorType.InvalidType)
         }
+    })
+})
+
+describe("number", () => {
+    test("type inference should be correct", () => {
+        const schema = schematic.number()
+
+        assertEqual<Infer<typeof schema>, number>(true)
+    })
+
+    test("should parse a number value", async () => {
+        const schema = schematic.number()
+
+        const result = await schema.parse(42)
+
+        expect(result).toBe(42)
     })
 })
 
@@ -137,5 +153,21 @@ describe("object", () => {
             expect(verifyError.errors).toHaveLength(1)
             expect(verifyError.errors[0].type).toEqual(SchematicErrorType.InvalidType)
         }
+    })
+})
+
+describe("string", () => {
+    test("type inference should be correct", () => {
+        const schema = schematic.string()
+
+        assertEqual<Infer<typeof schema>, string>(true)
+    })
+
+    test("should parse a string value", async () => {
+        const schema = schematic.string()
+
+        const result = await schema.parse("hello")
+
+        expect(result).toBe("hello")
     })
 })

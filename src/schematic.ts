@@ -1,13 +1,26 @@
 import { SchematicParseError } from "./error"
-import type { SchematicContext, SchematicError, SchematicParseResult } from "./types"
+import {
+    SchematicErrorType,
+    type SchematicContext,
+    type SchematicError,
+    type SchematicParseResult
+} from "./types"
 
 /**
  * Base class for all Schematics
  */
 export abstract class Schematic<T> {
+    /**
+     * @internal
+     */
+    validationChecks: Array<(value: T) => Promise<SchematicError | null>> = []
+
     constructor() {}
 
-    protected createSchematicError(issue: SchematicError): SchematicParseResult<T> {
+    /**
+     * @internal
+     */
+    createSchematicError(issue: SchematicError): SchematicParseResult<T> {
         return {
             isValid: false,
             errors: [issue]
@@ -35,7 +48,22 @@ export abstract class Schematic<T> {
             parent: null
         }
 
-        const result = await this.parseType(value, context)
+        let result = await this.parseType(value, context)
+
+        for (const check of this.validationChecks) {
+            if (!result.isValid) {
+                break
+            }
+
+            const error = await check(result.value)
+
+            if (error) {
+                result = {
+                    isValid: false,
+                    errors: [error]
+                }
+            }
+        }
 
         if (result.isValid) {
             return result.value
@@ -43,4 +71,29 @@ export abstract class Schematic<T> {
 
         throw new SchematicParseError(result.errors)
     }
+}
+
+type AbstractSchematicMixin<T> = abstract new (...args: any[]) => Schematic<T>
+
+export function SchematicPrimitiveType<T>(Base: AbstractSchematicMixin<T>) {
+    abstract class Mixin extends Base {
+        public exact(expectedValue: T): this {
+            this.validationChecks.push(async (value: unknown) => {
+                if (value !== expectedValue) {
+                    return {
+                        expected: expectedValue,
+                        message: `Expected ${expectedValue} but received ${value}`,
+                        path: [],
+                        type: SchematicErrorType.InvalidExactValue
+                    }
+                }
+
+                return null
+            })
+
+            return this
+        }
+    }
+
+    return Mixin
 }

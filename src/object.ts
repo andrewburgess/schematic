@@ -33,6 +33,9 @@ export class SchematicObject<T extends SchematicObjectShape> extends Schematic<I
         }
     }
 
+    /**
+     * @internal
+     */
     public async parseType(
         value: unknown,
         context: SchematicContext
@@ -82,12 +85,14 @@ export class SchematicObject<T extends SchematicObjectShape> extends Schematic<I
                 case UnknownKeys.Reject:
                     valid = false
                     errors.push(
-                        ...unknownKeys.map((key) => ({
-                            message: `Unrecognized key "${key}"`,
-                            path: context.path,
-                            key,
-                            type: SchematicErrorType.UnrecognizedKey
-                        }))
+                        ...unknownKeys.map(
+                            (key): SchematicError => ({
+                                message: `Unrecognized key "${key}"`,
+                                path: context.path,
+                                key,
+                                type: SchematicErrorType.UnrecognizedKey
+                            })
+                        )
                     )
                     break
                 case UnknownKeys.Strip:

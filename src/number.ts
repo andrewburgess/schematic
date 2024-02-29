@@ -1,7 +1,7 @@
 import { Schematic, SchematicPrimitiveType } from "./schematic"
 import { SchematicContext, SchematicErrorType, SchematicParseResult } from "./types"
 
-export class BooleanSchematic extends SchematicPrimitiveType(Schematic<boolean>) {
+export class NumberSchematic extends SchematicPrimitiveType(Schematic<number>) {
     constructor() {
         super()
     }
@@ -12,10 +12,10 @@ export class BooleanSchematic extends SchematicPrimitiveType(Schematic<boolean>)
     public async parseType(
         value: unknown,
         context: SchematicContext
-    ): Promise<SchematicParseResult<boolean>> {
-        if (typeof value !== "boolean") {
+    ): Promise<SchematicParseResult<number>> {
+        if (typeof value !== "number") {
             return this.createSchematicError({
-                message: `Expected a boolean but received a ${typeof value}`,
+                message: `Expected a number but received a ${typeof value}`,
                 path: context.path,
                 type: SchematicErrorType.InvalidType
             })

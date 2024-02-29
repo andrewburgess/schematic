@@ -19,6 +19,7 @@ export interface SchematicContext {
 }
 
 export enum SchematicErrorType {
+    InvalidExactValue = "InvalidExactValue",
     InvalidType = "InvalidType",
     UnrecognizedKey = "UnrecognizedKey"
 }
@@ -26,6 +27,11 @@ export enum SchematicErrorType {
 interface BaseSchematicError {
     message: string
     path: (string | number)[]
+}
+
+export type SchematicInvalidExactValueError = BaseSchematicError & {
+    type: SchematicErrorType.InvalidExactValue
+    expected: any
 }
 
 export type SchematicInvalidTypeError = BaseSchematicError & {
@@ -37,7 +43,10 @@ export type SchematicUnrecognizedKeyError = BaseSchematicError & {
     type: SchematicErrorType.UnrecognizedKey
 }
 
-export type SchematicError = SchematicInvalidTypeError | SchematicUnrecognizedKeyError
+export type SchematicError =
+    | SchematicInvalidExactValueError
+    | SchematicInvalidTypeError
+    | SchematicUnrecognizedKeyError
 
 export type SchematicObjectShape = { [key: string]: AnySchematic }
 
