@@ -1,7 +1,7 @@
-import { Schematic, SchematicPrimitiveType } from "./schematic"
+import { Schematic } from "./schematic"
 import { SchematicContext, SchematicErrorType, SchematicParseResult } from "./types"
 
-export class BooleanSchematic extends SchematicPrimitiveType(Schematic<boolean>) {
+export class BooleanSchematic extends Schematic<boolean> {
     constructor() {
         super()
     }

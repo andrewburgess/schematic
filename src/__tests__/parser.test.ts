@@ -154,6 +154,34 @@ describe("object", () => {
             expect(verifyError.errors[0].type).toEqual(SchematicErrorType.InvalidType)
         }
     })
+
+    it("should allow optional keys", async () => {
+        const schema = schematic.object({
+            isValid: schematic.boolean(),
+            nested: schematic.object({
+                isError: schematic.boolean()
+            }),
+            optional: schematic.object({
+                isOptional: schematic.boolean().optional()
+            })
+        })
+
+        const result = await schema.parse({
+            isValid: true,
+            nested: {
+                isError: false
+            },
+            optional: {}
+        })
+
+        expect(result).toEqual({
+            isValid: true,
+            nested: {
+                isError: false
+            },
+            optional: {}
+        })
+    })
 })
 
 describe("string", () => {

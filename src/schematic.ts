@@ -1,10 +1,12 @@
 import { SchematicParseError } from "./error"
 import {
-    SchematicErrorType,
     type SchematicContext,
     type SchematicError,
-    type SchematicParseResult
+    type SchematicParseResult,
+    AnySchematic,
+    Infer
 } from "./types"
+import { clone } from "./util"
 
 /**
  * Base class for all Schematics
@@ -35,6 +37,13 @@ export abstract class Schematic<T> {
      * @returns The result of the parsing
      */
     abstract parseType(value: unknown, context: SchematicContext): Promise<SchematicParseResult<T>>
+
+    public optional(): Schematic<T | undefined> {
+        if (this instanceof OptionalSchematic) {
+            return clone(this)
+        }
+        return new OptionalSchematic<Schematic<T>>(this)
+    }
 
     /**
      * Parse and validate an unknown type into the type T
@@ -73,27 +82,22 @@ export abstract class Schematic<T> {
     }
 }
 
-type AbstractSchematicMixin<T> = abstract new (...args: any[]) => Schematic<T>
-
-export function SchematicPrimitiveType<T>(Base: AbstractSchematicMixin<T>) {
-    abstract class Mixin extends Base {
-        public exact(expectedValue: T): this {
-            this.validationChecks.push(async (value: unknown) => {
-                if (value !== expectedValue) {
-                    return {
-                        expected: expectedValue,
-                        message: `Expected ${expectedValue} but received ${value}`,
-                        path: [],
-                        type: SchematicErrorType.InvalidExactValue
-                    }
-                }
-
-                return null
-            })
-
-            return this
-        }
+export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T> | undefined> {
+    constructor(readonly schematic: T) {
+        super()
     }
 
-    return Mixin
+    public async parseType(
+        value: unknown,
+        context: SchematicContext
+    ): Promise<SchematicParseResult<Infer<T> | undefined>> {
+        if (value === undefined) {
+            return {
+                isValid: true,
+                value: undefined
+            }
+        }
+
+        return this.schematic.parseType(value, context)
+    }
 }

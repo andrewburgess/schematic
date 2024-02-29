@@ -1,7 +1,7 @@
-import { Schematic, SchematicPrimitiveType } from "./schematic"
+import { Schematic } from "./schematic"
 import { SchematicContext, SchematicErrorType, SchematicParseResult } from "./types"
 
-export class NumberSchematic extends SchematicPrimitiveType(Schematic<number>) {
+export class NumberSchematic extends Schematic<number> {
     constructor() {
         super()
     }
