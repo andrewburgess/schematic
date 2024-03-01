@@ -6,10 +6,7 @@ export class NumberSchematic extends Schematic<number> {
         super()
     }
 
-    /**
-     * @internal
-     */
-    public async parseType(
+    async _parseType(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<number>> {

@@ -4,27 +4,30 @@ import { Schematic } from "./schematic"
  * A Schematic of any type
  */
 export type AnySchematic = Schematic<any>
-export type AssertEqual<T, Expected> = T extends Expected ? true : false
+export type AssertEqual<Type, Expected> = Type extends Expected ? true : false
 
-type AddQuestionMarks<T extends object, K extends keyof T = RequiredKeys<T>> = Pick<
-    Required<T>,
-    K
-> &
-    Partial<T>
-type Eval<T> = T extends any[] | Date | unknown ? T : Flat<T>
-type Flat<T> = T extends {}
-    ? T extends Date
-        ? T
-        : AddQuestionMarks<{ [key in keyof T]: T[key] }>
-    : T
-type RequiredKeys<T extends object> = {
-    [key in keyof T]: undefined extends T[key] ? never : key
-}[keyof T]
+type Eval<Type> = Type extends any[] | Date | unknown ? Type : Flat<Type>
+type Flat<Type> = Type extends {}
+    ? Type extends Date
+        ? Type
+        : { [key in keyof Type]: Type[key] }
+    : Type
 
+export type EnumType = { [key: string]: string | number; [num: number]: string }
 export type Infer<T> = T extends AnySchematic ? (T extends Schematic<infer U> ? U : any) : T
-export type InferObject<T extends SchematicObjectShape> = Eval<{
-    [key in keyof T]: T[key] extends Schematic<infer U> ? U : any
-}>
+export type InferObject<T extends SchematicObjectShape> = Flat<
+    Eval<{
+        [key in keyof T]: T[key] extends Schematic<infer U> ? U : any
+    }>
+>
+export type SchematicOmit<T, K extends keyof T> = Eval<Flat<Omit<T, K>>>
+export type SchematicPick<T, K extends keyof T> = Eval<Flat<Pick<T, K>>>
+
+export const INVALID = <T>(errors: SchematicError[]): SchematicParseResult<T> => ({
+    errors,
+    isValid: false
+})
+export const VALID = <T>(value: T): SchematicParseResult<T> => ({ isValid: true, value })
 
 export interface SchematicContext {
     readonly data: any
@@ -37,7 +40,8 @@ export enum SchematicErrorType {
     InvalidType = "InvalidType",
     TooBig = "TooBig",
     TooSmall = "TooSmall",
-    UnrecognizedKey = "UnrecognizedKey"
+    UnrecognizedKey = "UnrecognizedKey",
+    UnrecognizedValue = "UnrecognizedValue"
 }
 
 interface BaseSchematicError {
@@ -69,12 +73,18 @@ export type SchematicUnrecognizedKeyError = BaseSchematicError & {
     type: SchematicErrorType.UnrecognizedKey
 }
 
+export type SchematicUnrecognizedValueError = BaseSchematicError & {
+    expected: Array<string | number>
+    type: SchematicErrorType.UnrecognizedValue
+}
+
 export type SchematicError =
     | SchematicInvalidExactValueError
     | SchematicInvalidTypeError
     | SchematicTooBigError
     | SchematicTooSmallError
     | SchematicUnrecognizedKeyError
+    | SchematicUnrecognizedValueError
 
 export type SchematicObjectShape = {
     [key: string]: AnySchematic

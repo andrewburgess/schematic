@@ -2,14 +2,7 @@ import { Schematic } from "./schematic"
 import { SchematicContext, SchematicErrorType, SchematicParseResult } from "./types"
 
 export class BooleanSchematic extends Schematic<boolean> {
-    constructor() {
-        super()
-    }
-
-    /**
-     * @internal
-     */
-    public async parseType(
+    async _parseType(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<boolean>> {

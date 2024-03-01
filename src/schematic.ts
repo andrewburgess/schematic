@@ -6,7 +6,6 @@ import {
     AnySchematic,
     Infer
 } from "./types"
-import { clone } from "./util"
 
 /**
  * Base class for all Schematics
@@ -36,11 +35,11 @@ export abstract class Schematic<T> {
      * @internal
      * @returns The result of the parsing
      */
-    abstract parseType(value: unknown, context: SchematicContext): Promise<SchematicParseResult<T>>
+    abstract _parseType(value: unknown, context: SchematicContext): Promise<SchematicParseResult<T>>
 
-    public optional(): Schematic<T | undefined> {
+    public optional() {
         if (this instanceof OptionalSchematic) {
-            return clone(this)
+            return this as OptionalSchematic<Schematic<T>>
         }
         return new OptionalSchematic<Schematic<T>>(this)
     }
@@ -57,7 +56,7 @@ export abstract class Schematic<T> {
             parent: null
         }
 
-        let result = await this.parseType(value, context)
+        let result = await this._parseType(value, context)
 
         for (const check of this.validationChecks) {
             if (!result.isValid) {
@@ -87,7 +86,7 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
         super()
     }
 
-    public async parseType(
+    public async _parseType(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<Infer<T> | undefined>> {
@@ -98,6 +97,6 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
             }
         }
 
-        return this.schematic.parseType(value, context)
+        return this.schematic._parseType(value, context)
     }
 }

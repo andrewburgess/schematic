@@ -6,10 +6,7 @@ export class StringSchematic extends Schematic<string> {
         super()
     }
 
-    /**
-     * @internal
-     */
-    public async parseType(
+    public async _parseType(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<string>> {

@@ -37,6 +37,41 @@ describe("boolean", () => {
     })
 })
 
+describe("enum", () => {
+    enum TestEnum {
+        A = "a",
+        B = "b"
+    }
+
+    test("type inference should be correct", () => {
+        const schema = schematic.enum(TestEnum)
+
+        assertEqual<Infer<typeof schema>, TestEnum>(true)
+    })
+
+    test("should parse a valid enum value", async () => {
+        const schema = schematic.enum(TestEnum)
+
+        const result = await schema.parse("a")
+
+        expect(result).toBe("a")
+    })
+
+    test("should throw an error if the value is not a valid enum value", async () => {
+        const schema = schematic.enum(TestEnum)
+
+        try {
+            await schema.parse("c")
+            expect(true).toBe(false)
+        } catch (error) {
+            expect(error).toBeInstanceOf(SchematicParseError)
+            const verifyError = error as SchematicParseError
+            expect(verifyError.errors).toHaveLength(1)
+            expect(verifyError.errors[0].type).toEqual(SchematicErrorType.UnrecognizedValue)
+        }
+    })
+})
+
 describe("number", () => {
     test("type inference should be correct", () => {
         const schema = schematic.number()
@@ -180,6 +215,42 @@ describe("object", () => {
                 isError: false
             },
             optional: {}
+        })
+    })
+
+    it("should allow omitting keys and correctly validating those", async () => {
+        const base = schematic.object({
+            foo: schematic.string(),
+            bar: schematic.number(),
+            baz: schematic.boolean().optional()
+        })
+
+        const schema = base.omit("foo")
+
+        const result = await schema.parse({
+            bar: 42
+        })
+
+        expect(result).toEqual({
+            bar: 42
+        })
+    })
+
+    it("should allow picking keys and correctly validating those", async () => {
+        const base = schematic.object({
+            foo: schematic.string(),
+            bar: schematic.number(),
+            baz: schematic.boolean().optional()
+        })
+
+        const schema = base.pick("foo", "baz")
+
+        const result = await schema.parse({
+            foo: "test"
+        })
+
+        expect(result).toEqual({
+            foo: "test"
         })
     })
 })

@@ -5,7 +5,9 @@ import {
     SchematicError,
     SchematicErrorType,
     SchematicObjectShape,
-    SchematicParseResult
+    SchematicOmit,
+    SchematicParseResult,
+    SchematicPick
 } from "./types"
 import { assertNever } from "./util"
 
@@ -19,24 +21,21 @@ export interface SchematicObjectOptions {
     unknownKeys?: UnknownKeys
 }
 
-export class SchematicObject<T extends SchematicObjectShape> extends Schematic<InferObject<T>> {
+export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<InferObject<T>> {
     private readonly unknownKeys: UnknownKeys = UnknownKeys.Strip
 
     constructor(
         private readonly shape: T,
-        options: SchematicObjectOptions = {}
+        private readonly options: SchematicObjectOptions = {}
     ) {
         super()
 
-        if (options.unknownKeys) {
-            this.unknownKeys = options.unknownKeys
+        if (this.options.unknownKeys) {
+            this.unknownKeys = this.options.unknownKeys
         }
     }
 
-    /**
-     * @internal
-     */
-    public async parseType(
+    public async _parseType(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<InferObject<T>>> {
@@ -63,7 +62,7 @@ export class SchematicObject<T extends SchematicObjectShape> extends Schematic<I
                 parent: context
             }
 
-            const parsed = await schematic.parseType(val, childContext)
+            const parsed = await schematic._parseType(val, childContext)
 
             if (parsed.isValid) {
                 result[key] = parsed.value
@@ -113,5 +112,27 @@ export class SchematicObject<T extends SchematicObjectShape> extends Schematic<I
             isValid: true,
             value: result
         }
+    }
+
+    public omit<K extends keyof T>(...keys: K[]): Schematic<SchematicOmit<InferObject<T>, K>> {
+        const shape: any = {}
+        for (const key in this.shape) {
+            if (!keys.includes(key as any)) {
+                shape[key] = this.shape[key]
+            }
+        }
+        return new ObjectSchematic(shape, this.options) as unknown as Schematic<
+            SchematicOmit<InferObject<T>, K>
+        >
+    }
+
+    public pick<K extends keyof T>(...keys: K[]): Schematic<SchematicPick<InferObject<T>, K>> {
+        const shape: any = {}
+        for (const key of keys) {
+            shape[key] = this.shape[key]
+        }
+        return new ObjectSchematic(shape, this.options) as unknown as Schematic<
+            SchematicPick<InferObject<T>, K>
+        >
     }
 }
