@@ -22,10 +22,11 @@ export class EnumSchematic<T extends EnumType> extends Schematic<T[keyof T]> {
             }
         }
 
-        return this.createSchematicError({
+        return this.createTypeParseError({
             expected: Object.values(this.enumeration),
             message: `Unexpected value ${value} for enum "${Object.values(this.enumeration).join(" | ")}"`,
             path: context.path,
+            received: value,
             type: SchematicErrorType.UnrecognizedValue
         })
     }

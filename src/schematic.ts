@@ -3,28 +3,52 @@ import {
     type SchematicContext,
     type SchematicError,
     type SchematicParseResult,
-    AnySchematic,
-    Infer
+    type AnySchematic,
+    type Infer,
+    type SchematicOptions,
+    CoerceSymbol,
+    SchematicErrorType,
+    TypeErrorSymbol,
+    ValidationCheck
 } from "./types"
 
 /**
  * Base class for all Schematics
  */
 export abstract class Schematic<T> {
-    /**
-     * @internal
-     */
-    validationChecks: Array<(value: T) => Promise<SchematicError | null>> = []
-
-    constructor() {}
+    protected [CoerceSymbol]?: boolean
+    protected [TypeErrorSymbol]?: string
 
     /**
      * @internal
      */
-    createSchematicError(issue: SchematicError): SchematicParseResult<T> {
+    validationChecks: Array<ValidationCheck<T>> = []
+
+    constructor(options?: SchematicOptions) {
+        this[CoerceSymbol] = options?.coerce
+        this[TypeErrorSymbol] = options?.message
+    }
+
+    /**
+     * @internal
+     */
+    createTypeParseError(issue: SchematicError): SchematicParseResult<T> {
+        let message = issue.message
+
+        switch (issue.type) {
+            case SchematicErrorType.InvalidType:
+                message = this[TypeErrorSymbol] || message
+                break
+        }
+
         return {
             isValid: false,
-            errors: [issue]
+            errors: [
+                {
+                    ...issue,
+                    message
+                }
+            ]
         }
     }
 
@@ -63,7 +87,7 @@ export abstract class Schematic<T> {
                 break
             }
 
-            const error = await check(result.value)
+            const error = await check(result.value, context)
 
             if (error) {
                 result = {

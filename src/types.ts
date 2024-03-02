@@ -1,5 +1,41 @@
 import { Schematic } from "./schematic"
 
+/// #region Schematic Symbols
+export const CoerceSymbol = Symbol("coerce")
+export const TypeErrorSymbol = Symbol("typeErrorMessage")
+/// #endregion
+
+/// #region Schematic Enhancements
+export interface SchematicOptions {
+    /**
+     * If true, attempts to coerce the value into the type will be made,
+     * such as converting a string to a number, or "true" to a boolean
+     */
+    coerce?: boolean
+    /**
+     * Message for if the type parsing fails
+     */
+    message?: string
+}
+
+export interface Coercable {
+    coerce(): AnySchematic
+}
+
+export interface Defaultable<TValue> {
+    defaultValue: TValue | (() => TValue) | undefined
+    default(value: TValue | (() => TValue)): Schematic<TValue>
+}
+
+/// #endregion
+
+/// #region Schematic Validation
+export type ValidationCheck<TValue> = (
+    value: TValue,
+    context: SchematicContext
+) => Promise<SchematicError | null>
+/// #endregion
+
 /**
  * A Schematic of any type
  */
@@ -52,20 +88,24 @@ interface BaseSchematicError {
 export type SchematicInvalidExactValueError = BaseSchematicError & {
     type: SchematicErrorType.InvalidExactValue
     expected: any
+    received: any
 }
 
 export type SchematicInvalidTypeError = BaseSchematicError & {
+    received: any
     type: SchematicErrorType.InvalidType
 }
 
 export type SchematicTooBigError = BaseSchematicError & {
     type: SchematicErrorType.TooBig
     max: number
+    received: any
 }
 
 export type SchematicTooSmallError = BaseSchematicError & {
     type: SchematicErrorType.TooSmall
     min: number
+    received: any
 }
 
 export type SchematicUnrecognizedKeyError = BaseSchematicError & {
@@ -75,6 +115,7 @@ export type SchematicUnrecognizedKeyError = BaseSchematicError & {
 
 export type SchematicUnrecognizedValueError = BaseSchematicError & {
     expected: Array<string | number>
+    received: any
     type: SchematicErrorType.UnrecognizedValue
 }
 
