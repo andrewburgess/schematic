@@ -2,7 +2,9 @@ import { OptionalSchematic, Schematic } from "./schematic"
 
 // #region Schematic Symbols
 export const CoerceSymbol = Symbol("coerce")
+export const KeySchemaSymbol = Symbol("keySchema")
 export const TypeErrorSymbol = Symbol("typeErrorMessage")
+export const ValueSchemaSymbol = Symbol("valueSchema")
 // #endregion
 
 // #region Schematic Enhancements
