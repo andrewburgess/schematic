@@ -27,7 +27,7 @@ describe("object", () => {
             if (!(error instanceof schematic.SchematicParseError)) {
                 return
             }
-            expect(error.message).toBe("Expected number greater than or equal to 10 but received 9")
+            expect(error.message).toBe("Expected value greater than or equal to 10 but received 9")
         }
     })
 })

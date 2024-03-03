@@ -59,7 +59,11 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             const schematic = this.shape[key]
             const val = (value as any)[key]
             const childContext: SchematicContext = {
+                addError: function (error) {
+                    this.errors.push(error)
+                },
                 data: val,
+                errors: [],
                 path: [...context.path, key],
                 parent: context
             }

@@ -1,3 +1,4 @@
+import { createInvalidExactValueError, createTooBigError, createTooSmallError } from "./error"
 import { Schematic } from "./schematic"
 import {
     Coercable,
@@ -64,54 +65,48 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     public length(length: number, options?: SchematicOptions) {
         return addValidationCheck(this, async (value: string, context: SchematicContext) => {
             if (value.length !== length) {
-                return {
-                    message:
+                context.addError(
+                    createInvalidExactValueError(
+                        context.path,
+                        value,
+                        length,
                         options?.message ??
-                        `Expected string with length ${length} but received string with length ${value.length}`,
-                    expected: length,
-                    path: context.path,
-                    received: value,
-                    type: SchematicErrorType.InvalidExactValue
-                }
+                            `Expected string with length ${length} but received string with length ${value.length}`
+                    )
+                )
             }
-
-            return null
         })
     }
 
-    public min(min: number, options?: SchematicOptions) {
+    public min(min: number, options?: SchematicOptions & { exclusive?: boolean }) {
         return addValidationCheck(this, async (value: string, context: SchematicContext) => {
             if (value.length < min) {
-                return {
-                    message:
-                        options?.message ??
-                        `Expected string with length of at least ${min} but received string with length ${value.length}`,
-                    min,
-                    path: context.path,
-                    received: value,
-                    type: SchematicErrorType.TooSmall
-                }
+                context.addError(
+                    createTooSmallError(
+                        context.path,
+                        value,
+                        length,
+                        options?.exclusive,
+                        options?.message
+                    )
+                )
             }
-
-            return null
         })
     }
 
-    public max(max: number, options?: SchematicOptions) {
+    public max(max: number, options?: SchematicOptions & { exclusive?: boolean }) {
         return addValidationCheck(this, async (value: string, context: SchematicContext) => {
             if (value.length > max) {
-                return {
-                    message:
-                        options?.message ??
-                        `Expected a string with length less than ${max} but received a string with length ${value.length}`,
-                    max,
-                    path: context.path,
-                    received: value,
-                    type: SchematicErrorType.TooBig
-                }
+                context.addError(
+                    createTooBigError(
+                        context.path,
+                        value,
+                        length,
+                        options?.exclusive,
+                        options?.message
+                    )
+                )
             }
-
-            return null
         })
     }
 }

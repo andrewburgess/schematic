@@ -1,3 +1,4 @@
+import { createTooBigError, createTooSmallError } from "./error"
 import { Schematic } from "./schematic"
 import {
     Coercable,
@@ -56,24 +57,8 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
                 ? value.getTime() < maxDate.getTime()
                 : value.getTime() <= maxDate.getTime()
             if (!isValid) {
-                let message = options?.message
-                if (!message) {
-                    if (options?.exclusive) {
-                        message = `Expected Date less than ${maxDate.toISOString()} but received ${value.toISOString()}`
-                    } else {
-                        message = `Expected Date less than or equal to ${maxDate.toISOString()} but received ${value.toISOString()}`
-                    }
-                }
-                return {
-                    message,
-                    max: maxDate,
-                    path: context.path,
-                    received: value,
-                    type: SchematicErrorType.TooBig
-                }
+                context.addError(createTooBigError(context.path, value, max, options?.exclusive))
             }
-
-            return null
         })
     }
 
@@ -85,24 +70,8 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
                 ? value.getTime() > minDate.getTime()
                 : value.getTime() >= minDate.getTime()
             if (!isValid) {
-                let message = options?.message
-                if (!message) {
-                    if (options?.exclusive) {
-                        message = `Expected Date greater than ${minDate.toISOString()} but received ${value.toISOString()}`
-                    } else {
-                        message = `Expected Date greater than or equal to ${minDate.toISOString()} but received ${value.toISOString()}`
-                    }
-                }
-                return {
-                    message,
-                    min: minDate,
-                    path: context.path,
-                    received: value,
-                    type: SchematicErrorType.TooSmall
-                }
+                context.addError(createTooSmallError(context.path, value, min, options?.exclusive))
             }
-
-            return null
         })
     }
 }

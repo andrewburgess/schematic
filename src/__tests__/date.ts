@@ -34,7 +34,7 @@ describe("date", () => {
                 return
             }
             expect(error.message).toBe(
-                "Expected Date greater than or equal to 2021-01-01T00:00:00.000Z but received 2020-12-31T00:00:00.000Z"
+                "Expected value greater than or equal to 2021-01-01T00:00:00.000Z but received 2020-12-31T00:00:00.000Z"
             )
         }
     })
@@ -50,7 +50,7 @@ describe("date", () => {
                 return
             }
             expect(error.message).toBe(
-                "Expected Date greater than 2021-01-01T00:00:00.000Z but received 2021-01-01T00:00:00.000Z"
+                "Expected value greater than 2021-01-01T00:00:00.000Z but received 2021-01-01T00:00:00.000Z"
             )
         }
     })
@@ -69,7 +69,7 @@ describe("date", () => {
                 return
             }
             expect(error.message).toBe(
-                "Expected Date less than or equal to 2021-01-01T00:00:00.000Z but received 2021-01-02T00:00:00.000Z"
+                "Expected value less than or equal to 2021-01-01T00:00:00.000Z but received 2021-01-02T00:00:00.000Z"
             )
         }
     })
@@ -85,7 +85,7 @@ describe("date", () => {
                 return
             }
             expect(error.message).toBe(
-                "Expected Date less than 2021-01-01T00:00:00.000Z but received 2021-01-01T00:00:00.000Z"
+                "Expected value less than 2021-01-01T00:00:00.000Z but received 2021-01-01T00:00:00.000Z"
             )
         }
     })

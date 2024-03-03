@@ -30,10 +30,7 @@ export interface Defaultable<TValue> {
 // #endregion
 
 // #region Schematic Validation
-export type ValidationCheck<TValue> = (
-    value: TValue,
-    context: SchematicContext
-) => Promise<SchematicError | null>
+export type ValidationCheck<TValue> = (value: TValue, context: SchematicContext) => Promise<void>
 
 export const INVALID = <T>(errors: SchematicError[]): SchematicParseResult<T> => ({
     errors,
@@ -148,7 +145,9 @@ export type SchematicOmit<T, K extends keyof T> = Eval<Flat<Omit<T, K>>>
 export type SchematicPick<T, K extends keyof T> = Eval<Flat<Pick<T, K>>>
 
 export interface SchematicContext {
+    addError(error: SchematicError): void
     readonly data: any
+    readonly errors: SchematicError[]
     readonly path: (string | number)[]
     readonly parent: SchematicContext | null
 }

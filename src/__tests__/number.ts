@@ -84,7 +84,7 @@ describe("number", () => {
             if (!(error instanceof schematic.SchematicParseError)) {
                 return
             }
-            expect(error.message).toBe("Expected number less than or equal to 10 but received 11")
+            expect(error.message).toBe("Expected value less than or equal to 10 but received 11")
         }
     })
 
@@ -96,7 +96,7 @@ describe("number", () => {
             if (!(error instanceof schematic.SchematicParseError)) {
                 return
             }
-            expect(error.message).toBe("Expected number less than 10 but received 10")
+            expect(error.message).toBe("Expected value less than 10 but received 10")
         }
     })
 
@@ -114,7 +114,7 @@ describe("number", () => {
             if (!(error instanceof schematic.SchematicParseError)) {
                 return
             }
-            expect(error.message).toBe("Expected number greater than or equal to 10 but received 9")
+            expect(error.message).toBe("Expected value greater than or equal to 10 but received 9")
         }
     })
 
@@ -126,7 +126,7 @@ describe("number", () => {
             if (!(error instanceof schematic.SchematicParseError)) {
                 return
             }
-            expect(error.message).toBe("Expected number greater than 10 but received 10")
+            expect(error.message).toBe("Expected value greater than 10 but received 10")
         }
     })
 })

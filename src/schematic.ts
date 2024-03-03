@@ -12,6 +12,7 @@ import {
     type SchematicParseResult,
     INVALID
 } from "./types"
+import { addValidationCheck } from "./util"
 
 /**
  * Base class for all Schematics
@@ -59,25 +60,32 @@ export abstract class Schematic<T> {
      */
     abstract _parseType(value: unknown, context: SchematicContext): Promise<SchematicParseResult<T>>
 
+    /**
+     * @internal
+     */
     async runValidation(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<T>> {
         let result = await this._parseType(value, context)
 
+        if (!result.isValid) {
+            return result
+        }
+
         for (const check of this.validationChecks) {
-            if (!result.isValid) {
-                break
-            }
+            await check(result.value, context)
+        }
 
-            const error = await check(result.value, context)
-
-            if (error) {
-                result = INVALID([error])
-            }
+        if (context.errors.length > 0) {
+            return INVALID(context.errors)
         }
 
         return result
+    }
+
+    public ensure(check: ValidationCheck<T>): this {
+        return addValidationCheck(this, check)
     }
 
     public optional() {
@@ -94,7 +102,11 @@ export abstract class Schematic<T> {
      */
     public async parse(value: unknown): Promise<T> {
         const context: SchematicContext = {
+            addError: function (error: SchematicError) {
+                this.errors.push(error)
+            },
             data: value,
+            errors: [],
             path: [],
             parent: null
         }
