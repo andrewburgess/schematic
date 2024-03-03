@@ -1,11 +1,11 @@
-import { Schematic } from "./schematic"
+import { OptionalSchematic, Schematic } from "./schematic"
 
-/// #region Schematic Symbols
+// #region Schematic Symbols
 export const CoerceSymbol = Symbol("coerce")
 export const TypeErrorSymbol = Symbol("typeErrorMessage")
-/// #endregion
+// #endregion
 
-/// #region Schematic Enhancements
+// #region Schematic Enhancements
 export interface SchematicOptions {
     /**
      * If true, attempts to coerce the value into the type will be made,
@@ -27,51 +27,19 @@ export interface Defaultable<TValue> {
     default(value: TValue | (() => TValue)): Schematic<TValue>
 }
 
-/// #endregion
+// #endregion
 
-/// #region Schematic Validation
+// #region Schematic Validation
 export type ValidationCheck<TValue> = (
     value: TValue,
     context: SchematicContext
 ) => Promise<SchematicError | null>
-/// #endregion
-
-/**
- * A Schematic of any type
- */
-export type AnySchematic = Schematic<any>
-export type AssertEqual<Type, Expected> = Type extends Expected ? true : false
-
-type Eval<Type> = Type extends any[] | Date | unknown ? Type : Flat<Type>
-type Flat<Type> = Type extends {}
-    ? Type extends Date
-        ? Type
-        : { [key in keyof Type]: Type[key] }
-    : Type
-
-export type EnumType =
-    | { readonly [key: string]: string | number }
-    | { readonly [key: number]: string | number }
-export type Infer<T> = T extends AnySchematic ? (T extends Schematic<infer U> ? U : any) : T
-export type InferObject<T extends SchematicObjectShape> = Flat<
-    Eval<{
-        [key in keyof T]: T[key] extends Schematic<infer U> ? U : any
-    }>
->
-export type SchematicOmit<T, K extends keyof T> = Eval<Flat<Omit<T, K>>>
-export type SchematicPick<T, K extends keyof T> = Eval<Flat<Pick<T, K>>>
 
 export const INVALID = <T>(errors: SchematicError[]): SchematicParseResult<T> => ({
     errors,
     isValid: false
 })
 export const VALID = <T>(value: T): SchematicParseResult<T> => ({ isValid: true, value })
-
-export interface SchematicContext {
-    readonly data: any
-    readonly path: (string | number)[]
-    readonly parent: SchematicContext | null
-}
 
 export enum SchematicErrorType {
     InvalidExactValue = "InvalidExactValue",
@@ -100,13 +68,13 @@ export type SchematicInvalidTypeError = BaseSchematicError & {
 
 export type SchematicTooBigError = BaseSchematicError & {
     type: SchematicErrorType.TooBig
-    max: number
+    max: number | Date
     received: any
 }
 
 export type SchematicTooSmallError = BaseSchematicError & {
     type: SchematicErrorType.TooSmall
-    min: number
+    min: number | Date
     received: any
 }
 
@@ -129,10 +97,6 @@ export type SchematicError =
     | SchematicUnrecognizedKeyError
     | SchematicUnrecognizedValueError
 
-export type SchematicObjectShape = {
-    [key: string]: AnySchematic
-}
-
 type SchematicParseFailure = {
     errors: SchematicError[]
     isValid: false
@@ -144,3 +108,51 @@ type SchematicParseSuccess<T> = {
 }
 
 export type SchematicParseResult<T> = SchematicParseFailure | SchematicParseSuccess<T>
+// #endregion
+
+/**
+ * A Schematic of any type
+ */
+export type AnySchematic = Schematic<any>
+export type AssertEqual<Type, Expected> = Type extends Expected ? true : false
+
+type Eval<Type> = Type extends any[] | Date | unknown ? Type : Flat<Type>
+type Flat<Type> = Type extends {}
+    ? Type extends Date
+        ? Type
+        : { [key in keyof Type]: Type[key] }
+    : Type
+
+export type EnumType =
+    | { readonly [key: string]: string | number }
+    | { readonly [key: number]: string | number }
+
+type RequiredKeys<T> = {
+    [K in keyof T]: T[K] extends OptionalSchematic<any> ? never : K
+}[keyof T]
+type OptionalKeys<T> = {
+    [K in keyof T]: T[K] extends OptionalSchematic<any> ? K : never
+}[keyof T]
+
+export type Infer<T> = T extends AnySchematic ? (T extends Schematic<infer U> ? U : any) : T
+export type InferObject<T extends SchematicObjectShape> = Flat<
+    Eval<
+        {
+            [key in RequiredKeys<T>]: T[key] extends Schematic<infer U> ? U : any
+        } & {
+            [key in OptionalKeys<T>]?: T[key] extends Schematic<infer U> ? U : any
+        }
+    >
+>
+export type SchematicOmit<T, K extends keyof T> = Eval<Flat<Omit<T, K>>>
+export type SchematicPick<T, K extends keyof T> = Eval<Flat<Pick<T, K>>>
+
+export interface SchematicContext {
+    readonly data: any
+    readonly path: (string | number)[]
+    readonly parent: SchematicContext | null
+}
+
+export type SchematicObjectShape = {
+    [key: string]: AnySchematic
+}

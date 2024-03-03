@@ -13,10 +13,6 @@ import { addValidationCheck, withCoerce, withDefault } from "./util"
 export class StringSchematic extends Schematic<string> implements Coercable, Defaultable<string> {
     defaultValue: string | (() => string) | undefined
 
-    constructor() {
-        super()
-    }
-
     public async _parseType(
         value: unknown = typeof this.defaultValue === "function"
             ? this.defaultValue()

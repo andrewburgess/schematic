@@ -6,6 +6,7 @@ import {
     SchematicErrorType,
     SchematicObjectShape,
     SchematicOmit,
+    SchematicOptions,
     SchematicParseResult,
     SchematicPick
 } from "./types"
@@ -17,7 +18,7 @@ export enum UnknownKeys {
     Reject = "reject"
 }
 
-export interface SchematicObjectOptions {
+export interface SchematicObjectOptions extends SchematicOptions {
     unknownKeys?: UnknownKeys
 }
 
@@ -28,7 +29,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         private readonly shape: T,
         private readonly options: SchematicObjectOptions = {}
     ) {
-        super()
+        super(options)
 
         if (this.options.unknownKeys) {
             this.unknownKeys = this.options.unknownKeys
@@ -115,7 +116,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         }
     }
 
-    public omit<K extends keyof T>(...keys: K[]): Schematic<SchematicOmit<InferObject<T>, K>> {
+    public omit<K extends keyof InferObject<T>>(
+        ...keys: K[]
+    ): Schematic<SchematicOmit<InferObject<T>, K>> {
         const shape: any = {}
         for (const key in this.shape) {
             if (!keys.includes(key as any)) {
@@ -127,10 +130,12 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         >
     }
 
-    public pick<K extends keyof T>(...keys: K[]): Schematic<SchematicPick<InferObject<T>, K>> {
+    public pick<K extends keyof InferObject<T>>(
+        ...keys: K[]
+    ): Schematic<SchematicPick<InferObject<T>, K>> {
         const shape: any = {}
         for (const key of keys) {
-            shape[key] = this.shape[key]
+            shape[key] = this.shape[key as any]
         }
         return new ObjectSchematic(shape, this.options) as unknown as Schematic<
             SchematicPick<InferObject<T>, K>

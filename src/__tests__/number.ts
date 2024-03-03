@@ -3,13 +3,13 @@ import * as schematic from "../"
 describe("number", () => {
     const schema = schematic.number()
 
-    it("should parse a number", async () => {
+    test("should parse a number", async () => {
         const result = await schema.parse(10)
 
         expect(result).toBe(10)
     })
 
-    it("should throw an error if the value is not a number", async () => {
+    test("should throw an error if the value is not a number", async () => {
         try {
             await schema.parse(true)
         } catch (error) {
@@ -21,19 +21,19 @@ describe("number", () => {
         }
     })
 
-    it("should allow setting a default value", async () => {
+    test("should allow setting a default value", async () => {
         const result = await schema.default(42).parse(undefined)
 
         expect(result).toBe(42)
     })
 
-    it("should allow setting a default value with a function", async () => {
+    test("should allow setting a default value with a function", async () => {
         const result = await schema.default(() => 42).parse(undefined)
 
         expect(result).toBe(42)
     })
 
-    it("should fail with null even with 0 as default", async () => {
+    test("should fail with null even with 0 as default", async () => {
         try {
             await schema.default(0).parse(null)
         } catch (error) {
@@ -45,7 +45,7 @@ describe("number", () => {
         }
     })
 
-    it("should allow coercion of values", async () => {
+    test("should allow coercion of values", async () => {
         await Promise.all([
             expect(schema.coerce().parse("42")).resolves.toBe(42),
             expect(schema.coerce().parse("1.23")).resolves.toBe(1.23),
@@ -56,7 +56,7 @@ describe("number", () => {
         ])
     })
 
-    it("should reject invalid coercions", async () => {
+    test("should reject invalid coercions", async () => {
         await Promise.all([
             expect(schema.coerce().parse("invalid")).rejects.toThrow(
                 "Expected number but received string"
@@ -70,13 +70,13 @@ describe("number", () => {
         ])
     })
 
-    it("should allow setting a maximum value", async () => {
+    test("should allow setting a maximum value", async () => {
         const result = await schema.max(10).parse(10)
 
         expect(result).toBe(10)
     })
 
-    it("should throw an error if the value is greater than the maximum", async () => {
+    test("should throw an error if the value is greater than the maximum", async () => {
         try {
             await schema.max(10).parse(11)
         } catch (error) {
@@ -88,7 +88,7 @@ describe("number", () => {
         }
     })
 
-    it("should throw an error if the value is greater than the exclusive maximum", async () => {
+    test("should throw an error if the value is greater than the exclusive maximum", async () => {
         try {
             await schema.max(10, { exclusive: true }).parse(10)
         } catch (error) {
@@ -100,13 +100,13 @@ describe("number", () => {
         }
     })
 
-    it("should allow setting a minimum value", async () => {
+    test("should allow setting a minimum value", async () => {
         const result = await schema.min(10).parse(10)
 
         expect(result).toBe(10)
     })
 
-    it("should throw an error if the value is less than the minimum", async () => {
+    test("should throw an error if the value is less than the minimum", async () => {
         try {
             await schema.min(10).parse(9)
         } catch (error) {
@@ -118,7 +118,7 @@ describe("number", () => {
         }
     })
 
-    it("should throw an error if the value is less than the exclusive minimum", async () => {
+    test("should throw an error if the value is less than the exclusive minimum", async () => {
         try {
             await schema.min(10, { exclusive: true }).parse(10)
         } catch (error) {
