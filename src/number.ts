@@ -3,6 +3,7 @@ import { Schematic } from "./schematic"
 import {
     Coercable,
     CoerceSymbol,
+    DefaultValueSymbol,
     Defaultable,
     SchematicContext,
     SchematicOptions,
@@ -11,15 +12,15 @@ import {
 import { addValidationCheck, withCoerce, withDefault } from "./util"
 
 export class NumberSchematic extends Schematic<number> implements Coercable, Defaultable<number> {
-    defaultValue: number | (() => number) | undefined
+    [DefaultValueSymbol]: number | (() => number) | undefined
 
     /**
      * @internal
      */
     async _parseType(
-        value: unknown = typeof this.defaultValue === "function"
-            ? this.defaultValue()
-            : this.defaultValue,
+        value: unknown = typeof this[DefaultValueSymbol] === "function"
+            ? this[DefaultValueSymbol]()
+            : this[DefaultValueSymbol],
         context: SchematicContext
     ): Promise<SchematicParseResult<number>> {
         if (this[CoerceSymbol]) {

@@ -1,6 +1,15 @@
 import { createUnrecognizedValueError } from "./error"
 import { Schematic } from "./schematic"
-import { EnumType, VALID, SchematicContext, SchematicParseResult, INVALID } from "./types"
+import {
+    EnumType,
+    VALID,
+    SchematicContext,
+    SchematicParseResult,
+    INVALID,
+    Defaultable,
+    DefaultValueSymbol
+} from "./types"
+import { withDefault } from "./util"
 
 type EnumKeys<TEnum> = TEnum extends { readonly [key: string]: string | number }
     ? TEnum[keyof TEnum]
@@ -8,7 +17,12 @@ type EnumKeys<TEnum> = TEnum extends { readonly [key: string]: string | number }
       ? keyof TEnum
       : never
 
-export class EnumSchematic<T extends EnumType> extends Schematic<EnumKeys<T>> {
+export class EnumSchematic<T extends EnumType>
+    extends Schematic<EnumKeys<T>>
+    implements Defaultable<EnumKeys<T>>
+{
+    [DefaultValueSymbol]: EnumKeys<T> | (() => EnumKeys<T>) | undefined
+
     constructor(private readonly enumeration: T) {
         super()
     }
@@ -17,7 +31,9 @@ export class EnumSchematic<T extends EnumType> extends Schematic<EnumKeys<T>> {
      * @internal
      */
     async _parseType(
-        value: unknown,
+        value: unknown = typeof this[DefaultValueSymbol] === "function"
+            ? this[DefaultValueSymbol]()
+            : this[DefaultValueSymbol],
         context: SchematicContext
     ): Promise<SchematicParseResult<EnumKeys<T>>> {
         if (typeof value === "string" || typeof value === "number") {
@@ -27,5 +43,9 @@ export class EnumSchematic<T extends EnumType> extends Schematic<EnumKeys<T>> {
         }
 
         return INVALID([createUnrecognizedValueError(context.path, value, this.enumeration)])
+    }
+
+    public default(defaultValue: EnumKeys<T> | (() => EnumKeys<T>)): EnumSchematic<T> {
+        return withDefault(this, defaultValue)
     }
 }

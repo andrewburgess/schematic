@@ -2,6 +2,7 @@ import { OptionalSchematic, Schematic } from "./schematic"
 
 // #region Schematic Symbols
 export const CoerceSymbol = Symbol("coerce")
+export const DefaultValueSymbol = Symbol("defaultValue")
 export const KeySchemaSymbol = Symbol("keySchema")
 export const TypeErrorSymbol = Symbol("typeErrorMessage")
 export const ValueSchemaSymbol = Symbol("valueSchema")
@@ -25,7 +26,7 @@ export interface Coercable {
 }
 
 export interface Defaultable<TValue> {
-    defaultValue: TValue | (() => TValue) | undefined
+    [DefaultValueSymbol]: TValue | (() => TValue) | undefined
     default(value: TValue | (() => TValue)): Schematic<TValue>
 }
 

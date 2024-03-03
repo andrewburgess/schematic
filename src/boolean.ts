@@ -2,6 +2,7 @@ import { Schematic } from "./schematic"
 import {
     Coercable,
     CoerceSymbol,
+    DefaultValueSymbol,
     Defaultable,
     SchematicContext,
     SchematicParseResult
@@ -12,15 +13,15 @@ export class BooleanSchematic
     extends Schematic<boolean>
     implements Coercable, Defaultable<boolean>
 {
-    defaultValue: boolean | (() => boolean) | undefined
+    [DefaultValueSymbol]: boolean | (() => boolean) | undefined
 
     /**
      * @internal
      */
     async _parseType(
-        value: unknown = typeof this.defaultValue === "function"
-            ? this.defaultValue()
-            : this.defaultValue,
+        value: unknown = typeof this[DefaultValueSymbol] === "function"
+            ? this[DefaultValueSymbol]()
+            : this[DefaultValueSymbol],
         context: SchematicContext
     ): Promise<SchematicParseResult<boolean>> {
         if (this[CoerceSymbol]) {

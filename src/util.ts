@@ -1,5 +1,11 @@
 import { Schematic } from "./schematic"
-import { CoerceSymbol, type AssertEqual, type Defaultable, ValidationCheck } from "./types"
+import {
+    CoerceSymbol,
+    type AssertEqual,
+    type Defaultable,
+    ValidationCheck,
+    DefaultValueSymbol
+} from "./types"
 
 export const assertEqual = <A, B>(value: AssertEqual<A, B>) => value
 export const assertNever = (value: never) => value
@@ -47,7 +53,7 @@ export function withDefault<TValue, TSchematic extends Schematic<TValue> & Defau
 ) {
     const cloned = clone(schematic)
 
-    cloned.defaultValue = defaultValue
+    cloned[DefaultValueSymbol] = defaultValue
 
     return cloned
 }
