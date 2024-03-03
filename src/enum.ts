@@ -7,7 +7,13 @@ import {
     SchematicErrorType
 } from "./types"
 
-export class EnumSchematic<T extends EnumType> extends Schematic<T[keyof T]> {
+type EnumKeys<TEnum> = TEnum extends { readonly [key: string]: string | number }
+    ? TEnum[keyof TEnum]
+    : TEnum extends { readonly [key: number]: string | number }
+      ? keyof TEnum
+      : never
+
+export class EnumSchematic<T extends EnumType> extends Schematic<EnumKeys<T>> {
     constructor(private readonly enumeration: T) {
         super()
     }
@@ -15,10 +21,10 @@ export class EnumSchematic<T extends EnumType> extends Schematic<T[keyof T]> {
     async _parseType(
         value: unknown,
         context: SchematicContext
-    ): Promise<SchematicParseResult<T[keyof T]>> {
+    ): Promise<SchematicParseResult<EnumKeys<T>>> {
         if (typeof value === "string" || typeof value === "number") {
             if (Object.values(this.enumeration).includes(value)) {
-                return VALID(value as T[keyof T])
+                return VALID(value as EnumKeys<T>)
             }
         }
 

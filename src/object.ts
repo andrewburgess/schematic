@@ -63,7 +63,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
                 parent: context
             }
 
-            const parsed = await schematic._parseType(val, childContext)
+            const parsed = await schematic.runValidation(val, childContext)
 
             if (parsed.isValid) {
                 result[key] = parsed.value

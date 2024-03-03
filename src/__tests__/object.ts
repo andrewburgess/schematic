@@ -15,6 +15,7 @@ describe("object", () => {
         const schema = schematic.object({
             foo: schematic.string(),
             bar: schematic.object({
+                /** Cool baz number */
                 baz: schematic.number().min(10)
             })
         })
@@ -26,7 +27,7 @@ describe("object", () => {
             if (!(error instanceof schematic.SchematicParseError)) {
                 return
             }
-            expect(error.message).toBe("Expected string but received number")
+            expect(error.message).toBe("Expected number greater than or equal to 10 but received 9")
         }
     })
 })

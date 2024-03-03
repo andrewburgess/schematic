@@ -49,7 +49,9 @@ type Flat<Type> = Type extends {}
         : { [key in keyof Type]: Type[key] }
     : Type
 
-export type EnumType = { [key: string]: string | number; [num: number]: string }
+export type EnumType =
+    | { readonly [key: string]: string | number }
+    | { readonly [key: number]: string | number }
 export type Infer<T> = T extends AnySchematic ? (T extends Schematic<infer U> ? U : any) : T
 export type InferObject<T extends SchematicObjectShape> = Flat<
     Eval<{

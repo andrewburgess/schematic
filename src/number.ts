@@ -55,7 +55,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
     }
 
     public max(max: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addValidationCheck(this, async (value: number) => {
+        return addValidationCheck(this, async (value: number, context: SchematicContext) => {
             const isValid = options?.exclusive ? value < max : value <= max
             if (!isValid) {
                 let message = options?.message
@@ -69,7 +69,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
                 return {
                     message,
                     max,
-                    path: [],
+                    path: context.path,
                     received: value,
                     type: SchematicErrorType.TooBig
                 }
@@ -80,7 +80,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
     }
 
     public min(min: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addValidationCheck(this, async (value: number) => {
+        return addValidationCheck(this, async (value: number, context: SchematicContext) => {
             const isValid = options?.exclusive ? value > min : value >= min
             if (!isValid) {
                 let message = options?.message
@@ -94,7 +94,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
                 return {
                     message,
                     min,
-                    path: [],
+                    path: context.path,
                     received: value,
                     type: SchematicErrorType.TooSmall
                 }

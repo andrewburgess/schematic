@@ -1,15 +1,16 @@
 import { SchematicParseError } from "./error"
 import {
-    type SchematicContext,
-    type SchematicError,
-    type SchematicParseResult,
-    type AnySchematic,
-    type Infer,
-    type SchematicOptions,
     CoerceSymbol,
     SchematicErrorType,
     TypeErrorSymbol,
-    ValidationCheck
+    ValidationCheck,
+    type AnySchematic,
+    type Infer,
+    type SchematicContext,
+    type SchematicError,
+    type SchematicOptions,
+    type SchematicParseResult,
+    INVALID
 } from "./types"
 
 /**
@@ -41,15 +42,12 @@ export abstract class Schematic<T> {
                 break
         }
 
-        return {
-            isValid: false,
-            errors: [
-                {
-                    ...issue,
-                    message
-                }
-            ]
-        }
+        return INVALID([
+            {
+                ...issue,
+                message
+            }
+        ])
     }
 
     /**
@@ -60,6 +58,27 @@ export abstract class Schematic<T> {
      * @returns The result of the parsing
      */
     abstract _parseType(value: unknown, context: SchematicContext): Promise<SchematicParseResult<T>>
+
+    async runValidation(
+        value: unknown,
+        context: SchematicContext
+    ): Promise<SchematicParseResult<T>> {
+        let result = await this._parseType(value, context)
+
+        for (const check of this.validationChecks) {
+            if (!result.isValid) {
+                break
+            }
+
+            const error = await check(result.value, context)
+
+            if (error) {
+                result = INVALID([error])
+            }
+        }
+
+        return result
+    }
 
     public optional() {
         if (this instanceof OptionalSchematic) {
@@ -80,22 +99,7 @@ export abstract class Schematic<T> {
             parent: null
         }
 
-        let result = await this._parseType(value, context)
-
-        for (const check of this.validationChecks) {
-            if (!result.isValid) {
-                break
-            }
-
-            const error = await check(result.value, context)
-
-            if (error) {
-                result = {
-                    isValid: false,
-                    errors: [error]
-                }
-            }
-        }
+        let result = await this.runValidation(value, context)
 
         if (result.isValid) {
             return result.value

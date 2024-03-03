@@ -66,14 +66,14 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public length(length: number, options?: SchematicOptions) {
-        return addValidationCheck(this, async (value: string) => {
+        return addValidationCheck(this, async (value: string, context: SchematicContext) => {
             if (value.length !== length) {
                 return {
                     message:
                         options?.message ??
                         `Expected string with length ${length} but received string with length ${value.length}`,
                     expected: length,
-                    path: [],
+                    path: context.path,
                     received: value,
                     type: SchematicErrorType.InvalidExactValue
                 }
@@ -84,14 +84,14 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public min(min: number, options?: SchematicOptions) {
-        return addValidationCheck(this, async (value: string) => {
+        return addValidationCheck(this, async (value: string, context: SchematicContext) => {
             if (value.length < min) {
                 return {
                     message:
                         options?.message ??
                         `Expected string with length of at least ${min} but received string with length ${value.length}`,
                     min,
-                    path: [],
+                    path: context.path,
                     received: value,
                     type: SchematicErrorType.TooSmall
                 }
@@ -102,14 +102,14 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public max(max: number, options?: SchematicOptions) {
-        return addValidationCheck(this, async (value: string) => {
+        return addValidationCheck(this, async (value: string, context: SchematicContext) => {
             if (value.length > max) {
                 return {
                     message:
                         options?.message ??
                         `Expected a string with length less than ${max} but received a string with length ${value.length}`,
                     max,
-                    path: [],
+                    path: context.path,
                     received: value,
                     type: SchematicErrorType.TooBig
                 }
