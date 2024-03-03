@@ -13,6 +13,9 @@ import { addValidationCheck, withCoerce, withDefault } from "./util"
 export class DateSchematic extends Schematic<Date> implements Coercable, Defaultable<Date> {
     defaultValue: Date | (() => Date) | undefined
 
+    /**
+     * @internal
+     */
     async _parseType(
         value: unknown = typeof this.defaultValue === "function"
             ? this.defaultValue()

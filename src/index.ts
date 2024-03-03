@@ -5,7 +5,7 @@ import { EnumType, Infer, SchematicObjectShape, SchematicError, SchematicOptions
 import { NumberSchematic } from "./number"
 import { ObjectSchematic, SchematicObjectOptions, UnknownKeys } from "./object"
 import { RecordSchematic } from "./record"
-import { Schematic } from "./schematic"
+import { OptionalSchematic, Schematic } from "./schematic"
 import { StringSchematic } from "./string"
 
 export type {
@@ -15,8 +15,11 @@ export type {
     Infer,
     NumberSchematic,
     ObjectSchematic,
+    OptionalSchematic,
+    Schematic,
     SchematicError,
     SchematicObjectOptions,
+    StringSchematic,
     UnknownKeys
 }
 

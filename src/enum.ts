@@ -13,6 +13,9 @@ export class EnumSchematic<T extends EnumType> extends Schematic<EnumKeys<T>> {
         super()
     }
 
+    /**
+     * @internal
+     */
     async _parseType(
         value: unknown,
         context: SchematicContext

@@ -25,6 +25,9 @@ export class RecordSchematic<TKey extends string | number = string, TValue = any
         this[ValueSchemaSymbol] = valueSchema
     }
 
+    /**
+     * @internal
+     */
     async _parseType(
         value: unknown,
         context: SchematicContext

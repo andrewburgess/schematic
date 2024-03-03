@@ -36,6 +36,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         }
     }
 
+    /**
+     * @internal
+     */
     public async _parseType(
         value: unknown,
         context: SchematicContext

@@ -13,6 +13,9 @@ import { addValidationCheck, withCoerce, withDefault } from "./util"
 export class NumberSchematic extends Schematic<number> implements Coercable, Defaultable<number> {
     defaultValue: number | (() => number) | undefined
 
+    /**
+     * @internal
+     */
     async _parseType(
         value: unknown = typeof this.defaultValue === "function"
             ? this.defaultValue()

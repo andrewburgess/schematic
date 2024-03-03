@@ -14,6 +14,9 @@ export class BooleanSchematic
 {
     defaultValue: boolean | (() => boolean) | undefined
 
+    /**
+     * @internal
+     */
     async _parseType(
         value: unknown = typeof this.defaultValue === "function"
             ? this.defaultValue()

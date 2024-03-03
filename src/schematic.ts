@@ -119,7 +119,10 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
         super()
     }
 
-    public async _parseType(
+    /**
+     * @internal
+     */
+    async _parseType(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<Infer<T> | undefined>> {
