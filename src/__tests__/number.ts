@@ -41,7 +41,7 @@ describe("number", () => {
             if (!(error instanceof schematic.SchematicParseError)) {
                 return
             }
-            expect(error.message).toBe("Expected number but received object")
+            expect(error.message).toBe("Expected number but received null")
         }
     })
 

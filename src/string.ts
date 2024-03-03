@@ -5,7 +5,6 @@ import {
     CoerceSymbol,
     Defaultable,
     SchematicContext,
-    SchematicErrorType,
     SchematicOptions,
     SchematicParseResult
 } from "./types"
@@ -40,12 +39,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
         }
 
         if (typeof value !== "string") {
-            return this.createTypeParseError({
-                message: `Expected string but received ${typeof value}`,
-                path: context.path,
-                received: value,
-                type: SchematicErrorType.InvalidType
-            })
+            return this.createTypeParseError(context.path, "string", value)
         }
 
         return {

@@ -1,7 +1,6 @@
-import { SchematicParseError } from "./error"
+import { SchematicParseError, createInvalidTypeError } from "./error"
 import {
     CoerceSymbol,
-    SchematicErrorType,
     TypeErrorSymbol,
     ValidationCheck,
     type AnySchematic,
@@ -34,21 +33,15 @@ export abstract class Schematic<T> {
     /**
      * @internal
      */
-    createTypeParseError(issue: SchematicError): SchematicParseResult<T> {
-        let message = issue.message
+    createTypeParseError(
+        path: (string | number)[],
+        type: string,
+        received: any,
+        message?: string
+    ): SchematicParseResult<T> {
+        message = message ?? this[TypeErrorSymbol]
 
-        switch (issue.type) {
-            case SchematicErrorType.InvalidType:
-                message = this[TypeErrorSymbol] || message
-                break
-        }
-
-        return INVALID([
-            {
-                ...issue,
-                message
-            }
-        ])
+        return INVALID(createInvalidTypeError(path, type, received, message))
     }
 
     /**

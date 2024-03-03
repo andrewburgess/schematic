@@ -4,7 +4,6 @@ import {
     CoerceSymbol,
     Defaultable,
     SchematicContext,
-    SchematicErrorType,
     SchematicParseResult
 } from "./types"
 import { withCoerce, withDefault } from "./util"
@@ -43,12 +42,7 @@ export class BooleanSchematic
         }
 
         if (typeof value !== "boolean") {
-            return this.createTypeParseError({
-                message: `Expected boolean but received ${typeof value}`,
-                path: context.path,
-                received: value,
-                type: SchematicErrorType.InvalidType
-            })
+            return this.createTypeParseError(context.path, "boolean", value)
         }
 
         return {

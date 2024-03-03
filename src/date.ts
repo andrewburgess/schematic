@@ -5,7 +5,6 @@ import {
     CoerceSymbol,
     Defaultable,
     SchematicContext,
-    SchematicErrorType,
     SchematicOptions,
     SchematicParseResult
 } from "./types"
@@ -27,12 +26,7 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
         }
 
         if (!(value instanceof Date) || isNaN(value.getTime())) {
-            return this.createTypeParseError({
-                message: `Expected Date but received ${typeof value}`,
-                path: context.path,
-                received: value,
-                type: SchematicErrorType.InvalidType
-            })
+            return this.createTypeParseError(context.path, "Date", value)
         }
 
         return {

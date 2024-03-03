@@ -41,7 +41,7 @@ describe("boolean", () => {
             if (!(error instanceof schematic.SchematicParseError)) {
                 return
             }
-            expect(error.message).toBe("Expected boolean but received object")
+            expect(error.message).toBe("Expected boolean but received null")
         }
     })
 
@@ -65,7 +65,7 @@ describe("boolean", () => {
                 "Expected boolean but received object"
             ),
             expect(schema.coerce().parse(null)).rejects.toThrow(
-                "Expected boolean but received object"
+                "Expected boolean but received null"
             ),
             expect(schema.coerce().parse(undefined)).rejects.toThrow(
                 "Expected boolean but received undefined"

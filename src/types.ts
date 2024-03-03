@@ -32,8 +32,8 @@ export interface Defaultable<TValue> {
 // #region Schematic Validation
 export type ValidationCheck<TValue> = (value: TValue, context: SchematicContext) => Promise<void>
 
-export const INVALID = <T>(errors: SchematicError[]): SchematicParseResult<T> => ({
-    errors,
+export const INVALID = <T>(errors: SchematicError | SchematicError[]): SchematicParseResult<T> => ({
+    errors: Array.isArray(errors) ? errors : [errors],
     isValid: false
 })
 export const VALID = <T>(value: T): SchematicParseResult<T> => ({ isValid: true, value })

@@ -1,4 +1,4 @@
-import { SchematicError, SchematicErrorType } from "./types"
+import { EnumType, SchematicError, SchematicErrorType } from "./types"
 
 export class SchematicParseError extends Error {
     constructor(public errors: SchematicError[]) {
@@ -32,8 +32,16 @@ export function createInvalidTypeError(
     received: any,
     message?: string
 ): SchematicError {
+    let receivedType: string = typeof received
+    if (typeof received === "object" && Array.isArray(received)) {
+        receivedType = "array"
+    } else if (typeof received === "object" && received === null) {
+        receivedType = "null"
+    } else if (typeof received === "object" && received instanceof Date) {
+        receivedType = "date"
+    }
     return {
-        message: message ?? `Expected ${type} but received ${typeof received}`,
+        message: message ?? `Expected ${type} but received ${receivedType}`,
         path,
         received,
         type: SchematicErrorType.InvalidType
@@ -81,5 +89,22 @@ export function createTooSmallError(
         received,
         min,
         type: SchematicErrorType.TooSmall
+    }
+}
+
+export function createUnrecognizedValueError(
+    path: (string | number)[],
+    received: any,
+    expected: EnumType,
+    message?: string
+): SchematicError {
+    return {
+        message:
+            message ??
+            `Unexpected value ${received} for enum "${Object.values(expected).join(" | ")}"`,
+        path,
+        received,
+        expected: Object.values(expected),
+        type: SchematicErrorType.UnrecognizedValue
     }
 }

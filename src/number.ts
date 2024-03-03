@@ -5,7 +5,6 @@ import {
     CoerceSymbol,
     Defaultable,
     SchematicContext,
-    SchematicErrorType,
     SchematicOptions,
     SchematicParseResult
 } from "./types"
@@ -30,12 +29,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
         }
 
         if (typeof value !== "number") {
-            return this.createTypeParseError({
-                message: `Expected number but received ${typeof value}`,
-                path: context.path,
-                received: value,
-                type: SchematicErrorType.InvalidType
-            })
+            return this.createTypeParseError(context.path, "number", value)
         }
 
         return {

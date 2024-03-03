@@ -41,12 +41,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         context: SchematicContext
     ): Promise<SchematicParseResult<InferObject<T>>> {
         if (typeof value !== "object" || value === null || Array.isArray(value)) {
-            return this.createTypeParseError({
-                message: `Expected an object but got ${typeof value}`,
-                path: context.path,
-                received: value,
-                type: SchematicErrorType.InvalidType
-            })
+            return this.createTypeParseError(context.path, "object", value)
         }
 
         const errors: SchematicError[] = []
