@@ -7,7 +7,7 @@ import {
     DefaultValueSymbol
 } from "./types"
 
-export const assertEqual = <A, B>(value: AssertEqual<A, B>) => value
+export const assertEqualType = <A, B>(value: AssertEqual<A, B>) => value
 export const assertNever = (value: never) => value
 
 export function clone<T>(src: T): T {

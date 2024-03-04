@@ -75,9 +75,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
                 result[key] = parsed.value
             } else {
                 valid = false
-                for (const error of parsed.errors) {
-                    errors.push(error)
-                }
+                errors.push(...parsed.errors)
             }
         }
 

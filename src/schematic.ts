@@ -3,6 +3,7 @@ import { SchematicParseError, createInvalidTypeError } from "./error"
 import {
     CoerceSymbol,
     INVALID,
+    OutputSymbol,
     ShapeSymbol,
     TypeErrorSymbol,
     ValidationCheck,
@@ -18,6 +19,10 @@ import {
  * Base class for all Schematics
  */
 export abstract class Schematic<T> {
+    /**
+     * @internal
+     */
+    public readonly [OutputSymbol]!: T
     protected [CoerceSymbol]?: boolean
     protected [TypeErrorSymbol]?: string
 
@@ -86,9 +91,7 @@ export abstract class Schematic<T> {
         return addValidationCheck(this, check)
     }
 
-    optional(this: OptionalSchematic<any>): this
-    optional(): OptionalSchematic<this>
-    optional(): any {
+    optional(): OptionalSchematic<this> {
         const cloned = clone(this)
 
         if (cloned instanceof OptionalSchematic) {

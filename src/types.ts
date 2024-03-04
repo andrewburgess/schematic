@@ -1,9 +1,10 @@
-import { OptionalSchematic, Schematic } from "./schematic"
+import { Schematic } from "./schematic"
 
 // #region Schematic Symbols
 export const CoerceSymbol = Symbol("coerce")
 export const DefaultValueSymbol = Symbol("defaultValue")
 export const KeySchemaSymbol = Symbol("keySchema")
+export const OutputSymbol = Symbol("output")
 export const ShapeSymbol = Symbol("shape")
 export const TypeErrorSymbol = Symbol("typeErrorMessage")
 export const ValueSchemaSymbol = Symbol("valueSchema")
@@ -114,42 +115,38 @@ type SchematicParseSuccess<T> = {
 export type SchematicParseResult<T> = SchematicParseFailure | SchematicParseSuccess<T>
 // #endregion
 
+// #region Schematic Type Testing
+export type AssertEqual<Type, Expected> = Type extends Expected ? true : false
+// #endregion
+
 /**
  * A Schematic of any type
  */
 export type AnySchematic = Schematic<any>
-export type AssertEqual<Type, Expected> = Type extends Expected ? true : false
-
-export type Eval<Type> = Type extends any[] | Date | unknown ? Type : Flat<Type>
-export type Flat<Type> = Type extends {}
-    ? Type extends Date
-        ? Type
-        : { [key in keyof Type]: Type[key] }
-    : Type
 
 export type EnumType =
     | { readonly [key: string]: string | number }
     | { readonly [key: number]: string | number }
 
-type RequiredKeys<T> = {
-    [K in keyof T]: T[K] extends OptionalSchematic<any> ? never : K
-}[keyof T]
-type OptionalKeys<T> = {
-    [K in keyof T]: T[K] extends OptionalSchematic<any> ? K : never
+export type Identity<T> = T
+export type Flatten<T> = Identity<{ [key in keyof T]: T[key] }>
+
+type OptionalKeys<T extends SchematicObjectShape> = {
+    [key in keyof T]: undefined extends Infer<T[key]> ? (key extends symbol ? never : key) : never
 }[keyof T]
 
-export type Infer<T> = T extends AnySchematic ? (T extends Schematic<infer U> ? U : any) : never
-export type InferObject<T extends SchematicObjectShape> = Flat<
-    Eval<
-        {
-            [key in RequiredKeys<T>]: T[key] extends Schematic<infer U> ? U : any
-        } & {
-            [key in OptionalKeys<T>]?: T[key] extends Schematic<infer U> ? U : any
-        }
-    >
+type RequiredKeys<T extends SchematicObjectShape> = Exclude<string & keyof T, OptionalKeys<T>>
+
+export type Infer<T> = T extends AnySchematic ? T[typeof OutputSymbol] : never
+export type InferObject<T extends SchematicObjectShape> = Flatten<
+    {
+        [key in RequiredKeys<T>]: T[key][typeof OutputSymbol]
+    } & {
+        [key in OptionalKeys<T>]?: T[key][typeof OutputSymbol]
+    }
 >
-export type SchematicOmit<T, K extends keyof T> = Eval<Flat<Omit<T, K>>>
-export type SchematicPick<T, K extends keyof T> = Eval<Flat<Pick<T, K>>>
+export type SchematicOmit<T, K extends keyof T> = Identity<Flatten<Omit<T, K>>>
+export type SchematicPick<T, K extends keyof T> = Identity<Flatten<Pick<T, K>>>
 
 export interface SchematicContext {
     addError(error: SchematicError): void
