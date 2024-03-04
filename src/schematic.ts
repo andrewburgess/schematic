@@ -1,6 +1,9 @@
+import { addValidationCheck, clone } from "./util"
 import { SchematicParseError, createInvalidTypeError } from "./error"
 import {
     CoerceSymbol,
+    INVALID,
+    ShapeSymbol,
     TypeErrorSymbol,
     ValidationCheck,
     type AnySchematic,
@@ -8,10 +11,8 @@ import {
     type SchematicContext,
     type SchematicError,
     type SchematicOptions,
-    type SchematicParseResult,
-    INVALID
+    type SchematicParseResult
 } from "./types"
-import { addValidationCheck } from "./util"
 
 /**
  * Base class for all Schematics
@@ -40,6 +41,10 @@ export abstract class Schematic<T> {
         message?: string
     ): SchematicParseResult<T> {
         message = message ?? this[TypeErrorSymbol]
+
+        if (!message && typeof received === "undefined") {
+            message = "Required"
+        }
 
         return INVALID(createInvalidTypeError(path, type, received, message))
     }
@@ -81,11 +86,20 @@ export abstract class Schematic<T> {
         return addValidationCheck(this, check)
     }
 
-    public optional() {
-        if (this instanceof OptionalSchematic) {
-            return this as OptionalSchematic<Schematic<T>>
+    optional(this: OptionalSchematic<any>): this
+    optional(): OptionalSchematic<this>
+    optional(): any {
+        const cloned = clone(this)
+
+        if (cloned instanceof OptionalSchematic) {
+            return cloned
         }
-        return new OptionalSchematic<Schematic<T>>(this)
+
+        return new OptionalSchematic(cloned)
+    }
+
+    public required() {
+        return clone(this)
     }
 
     /**
@@ -115,8 +129,12 @@ export abstract class Schematic<T> {
 }
 
 export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T> | undefined> {
+    public readonly [ShapeSymbol]: T
+
     constructor(readonly schematic: T) {
         super()
+
+        this[ShapeSymbol] = schematic
     }
 
     /**
@@ -133,6 +151,10 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
             }
         }
 
-        return this.schematic._parseType(value, context)
+        return this[ShapeSymbol]._parseType(value, context)
+    }
+
+    public required<T extends AnySchematic = this[typeof ShapeSymbol]>(): T {
+        return this[ShapeSymbol] as unknown as T
     }
 }

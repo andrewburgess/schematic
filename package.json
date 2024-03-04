@@ -2,7 +2,7 @@
     "name": "schematic",
     "version": "0.0.1",
     "description": "Schematic is a schema validator and transformer",
-    "main": "index.js",
+    "main": "./lib/index.js",
     "scripts": {
         "lint": "eslint --cache --ext .ts ./src",
         "tsc": "tsc",
@@ -10,7 +10,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git@git-ssh.andrewburgess.io:andrewburgess/schematic"
+        "url": "https://git.andrewburgess.io/andrewburgess/schematic"
     },
     "keywords": [
         "validator",
@@ -32,7 +32,17 @@
         "jest": "^29.7.0",
         "prettier": "^3.2.5",
         "ts-jest": "^29.1.2",
-        "ts-node": "^10.9.2",
         "typescript": "^5.3.3"
-    }
+    },
+    "exports": {
+        ".": {
+            "types": "./lib/index.d.ts",
+            "import": "./lib/index.js",
+            "require": "./lib/index.js"
+        },
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "lib"
+    ]
 }

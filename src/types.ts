@@ -4,6 +4,7 @@ import { OptionalSchematic, Schematic } from "./schematic"
 export const CoerceSymbol = Symbol("coerce")
 export const DefaultValueSymbol = Symbol("defaultValue")
 export const KeySchemaSymbol = Symbol("keySchema")
+export const ShapeSymbol = Symbol("shape")
 export const TypeErrorSymbol = Symbol("typeErrorMessage")
 export const ValueSchemaSymbol = Symbol("valueSchema")
 // #endregion
@@ -33,7 +34,10 @@ export interface Defaultable<TValue> {
 // #endregion
 
 // #region Schematic Validation
-export type ValidationCheck<TValue> = (value: TValue, context: SchematicContext) => Promise<void>
+export type ValidationCheck<TValue> = (
+    value: TValue,
+    context: SchematicContext
+) => Promise<void> | void
 
 export const INVALID = <T>(errors: SchematicError | SchematicError[]): SchematicParseResult<T> => ({
     errors: Array.isArray(errors) ? errors : [errors],
@@ -52,7 +56,7 @@ export enum SchematicErrorType {
 
 interface BaseSchematicError {
     message: string
-    path: (string | number)[]
+    path?: (string | number)[]
 }
 
 export type SchematicInvalidExactValueError = BaseSchematicError & {
@@ -116,8 +120,8 @@ export type SchematicParseResult<T> = SchematicParseFailure | SchematicParseSucc
 export type AnySchematic = Schematic<any>
 export type AssertEqual<Type, Expected> = Type extends Expected ? true : false
 
-type Eval<Type> = Type extends any[] | Date | unknown ? Type : Flat<Type>
-type Flat<Type> = Type extends {}
+export type Eval<Type> = Type extends any[] | Date | unknown ? Type : Flat<Type>
+export type Flat<Type> = Type extends {}
     ? Type extends Date
         ? Type
         : { [key in keyof Type]: Type[key] }
@@ -134,7 +138,7 @@ type OptionalKeys<T> = {
     [K in keyof T]: T[K] extends OptionalSchematic<any> ? K : never
 }[keyof T]
 
-export type Infer<T> = T extends AnySchematic ? (T extends Schematic<infer U> ? U : any) : T
+export type Infer<T> = T extends AnySchematic ? (T extends Schematic<infer U> ? U : any) : never
 export type InferObject<T extends SchematicObjectShape> = Flat<
     Eval<
         {
