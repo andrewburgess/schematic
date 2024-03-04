@@ -8,7 +8,8 @@ import {
     SchematicOmit,
     SchematicOptions,
     SchematicParseResult,
-    SchematicPick
+    SchematicPick,
+    ShapeSymbol
 } from "./types"
 import { assertNever } from "./util"
 
@@ -23,13 +24,15 @@ export interface SchematicObjectOptions extends SchematicOptions {
 }
 
 export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<InferObject<T>> {
+    public readonly [ShapeSymbol]: T
     private readonly unknownKeys: UnknownKeys = UnknownKeys.Strip
 
     constructor(
-        private readonly shape: T,
+        shape: T,
         private readonly options: SchematicObjectOptions = {}
     ) {
         super(options)
+        this[ShapeSymbol] = shape
 
         if (this.options.unknownKeys) {
             this.unknownKeys = this.options.unknownKeys
@@ -49,12 +52,12 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
 
         const errors: SchematicError[] = []
         let valid = true
-        const definedKeys: string[] = Object.keys(this.shape)
+        const definedKeys: string[] = Object.keys(this[ShapeSymbol])
         const unknownKeys = Object.keys(value).filter((key) => !definedKeys.includes(key))
         const result: any = {}
 
         for (const key of definedKeys) {
-            const schematic = this.shape[key]
+            const schematic = this[ShapeSymbol][key]
             const val = (value as any)[key]
             const childContext: SchematicContext = {
                 addError: function (error) {
@@ -122,9 +125,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         ...keys: K[]
     ): Schematic<SchematicOmit<InferObject<T>, K>> {
         const shape: any = {}
-        for (const key in this.shape) {
+        for (const key in this[ShapeSymbol]) {
             if (!keys.includes(key as any)) {
-                shape[key] = this.shape[key]
+                shape[key] = this[ShapeSymbol][key]
             }
         }
         return new ObjectSchematic(shape, this.options) as unknown as Schematic<
@@ -137,7 +140,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
     ): Schematic<SchematicPick<InferObject<T>, K>> {
         const shape: any = {}
         for (const key of keys) {
-            shape[key] = this.shape[key as any]
+            shape[key] = this[ShapeSymbol][key as any]
         }
         return new ObjectSchematic(shape, this.options) as unknown as Schematic<
             SchematicPick<InferObject<T>, K>
