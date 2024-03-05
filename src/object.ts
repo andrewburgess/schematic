@@ -52,19 +52,24 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<InferObject<T>>> {
-        if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        // Allow an undefined value through so that default values in the shape can be used
+        // to populate it
+        if (
+            typeof value !== "undefined" &&
+            (typeof value !== "object" || value === null || Array.isArray(value))
+        ) {
             return this.createTypeParseError(context.path, "object", value)
         }
 
         const errors: SchematicError[] = []
         let valid = true
         const definedKeys: string[] = Object.keys(this[ShapeSymbol])
-        const unknownKeys = Object.keys(value).filter((key) => !definedKeys.includes(key))
+        const unknownKeys = Object.keys(value ?? {}).filter((key) => !definedKeys.includes(key))
         const result: any = {}
 
         for (const key of definedKeys) {
             const schematic = this[ShapeSymbol][key]
-            const val = (value as any)[key]
+            const val = (value as any)?.[key]
             const childContext: SchematicContext = {
                 addError: function (error) {
                     this.errors.push(error)

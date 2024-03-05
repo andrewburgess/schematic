@@ -186,3 +186,32 @@ test("should allow extending an object schema", async () => {
 
     expect(result).toEqual({ foo: "foo", bar: 10, baz: true })
 })
+
+test("default keys should still populate if base object is undefined", async () => {
+    const base = schematic.object({
+        foo: schematic.string().default("foo"),
+        bar: schematic.number().default(10)
+    })
+
+    const result = await base.parse(undefined)
+
+    expect(result).toEqual({ foo: "foo", bar: 10 })
+})
+
+test("rejects type if not all properties have defaults and object is undefined", async () => {
+    const base = schematic.object({
+        foo: schematic.string().default("foo"),
+        bar: schematic.number()
+    })
+
+    try {
+        await base.parse(undefined)
+        expect(true).toBe(false)
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.message).toBe('"bar" is required')
+    }
+})
