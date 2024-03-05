@@ -9,7 +9,7 @@ import {
     SchematicOptions,
     SchematicParseResult
 } from "./types"
-import { addValidationCheck, withCoerce, withDefault } from "./util"
+import { addCheck, withCoerce, withDefault } from "./util"
 
 export class NumberSchematic extends Schematic<number> implements Coercable, Defaultable<number> {
     /**
@@ -54,7 +54,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
     }
 
     public max(max: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addValidationCheck(this, async (value: number, context: SchematicContext) => {
+        return addCheck(this, async (value: number, context: SchematicContext) => {
             const isValid = options?.exclusive ? value < max : value <= max
             if (!isValid) {
                 context.addError(createTooBigError(context.path, value, max, options?.exclusive))
@@ -63,7 +63,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
     }
 
     public min(min: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addValidationCheck(this, async (value: number, context: SchematicContext) => {
+        return addCheck(this, async (value: number, context: SchematicContext) => {
             const isValid = options?.exclusive ? value > min : value >= min
             if (!isValid) {
                 context.addError(createTooSmallError(context.path, value, min, options?.exclusive))

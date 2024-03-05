@@ -28,13 +28,13 @@ export function clone<T>(src: T): T {
     return cpy
 }
 
-export function addValidationCheck<TValue, TSchematic extends Schematic<TValue>>(
+export function addCheck<TValue, TSchematic extends Schematic<TValue>>(
     schematic: TSchematic,
     check: ValidationCheck<TValue>
 ) {
     const cloned = clone(schematic)
 
-    cloned.validationChecks.push(check as any)
+    cloned.checks.push(check as any)
 
     return cloned
 }

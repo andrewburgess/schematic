@@ -1,4 +1,4 @@
-import { addValidationCheck, clone, mergeValues } from "./util"
+import { addCheck, clone, mergeValues } from "./util"
 import {
     SchematicParseError,
     createInvalidExactValueError,
@@ -19,7 +19,8 @@ import {
     type SchematicError,
     type SchematicOptions,
     type SchematicParseResult,
-    SchematicErrorType
+    SchematicErrorType,
+    TestCheck
 } from "./types"
 
 /**
@@ -36,7 +37,7 @@ export abstract class Schematic<T> {
     /**
      * @internal
      */
-    validationChecks: Array<ValidationCheck<any>> = []
+    checks: Array<ValidationCheck<any>> = []
 
     constructor(options?: SchematicOptions) {
         this[CoerceSymbol] = options?.coerce
@@ -83,7 +84,7 @@ export abstract class Schematic<T> {
             return result
         }
 
-        for (const check of this.validationChecks) {
+        for (const check of this.checks) {
             await check(result.value, context)
         }
 
@@ -108,7 +109,7 @@ export abstract class Schematic<T> {
     }
 
     public ensure(check: ValidationCheck<T>): this {
-        return addValidationCheck(this, check)
+        return addCheck(this, check)
     }
 
     public optional(): OptionalSchematic<this> {
@@ -148,6 +149,19 @@ export abstract class Schematic<T> {
         }
 
         throw new SchematicParseError(result.errors)
+    }
+
+    public test(check: TestCheck<T>, message?: string): this {
+        return addCheck(this, async (value: T, context: SchematicContext) => {
+            const result = await check(value)
+            if (!result) {
+                context.addError({
+                    message: message ?? "Value did not pass test",
+                    path: context.path,
+                    type: SchematicErrorType.ValidationError
+                })
+            }
+        })
     }
 }
 
@@ -207,7 +221,7 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
     }
 
     public length(length: number, options?: SchematicOptions) {
-        return addValidationCheck(this, async (value: Infer<T>[], context: SchematicContext) => {
+        return addCheck(this, async (value: Infer<T>[], context: SchematicContext) => {
             if (value.length !== length) {
                 const defaultMessage = `Expected array with exactly ${length} elements but received ${value.length}`
                 context.addError(
@@ -223,7 +237,7 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
     }
 
     public min(min: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addValidationCheck(this, async (value: Infer<T>[], context: SchematicContext) => {
+        return addCheck(this, async (value: Infer<T>[], context: SchematicContext) => {
             const isValid = options?.exclusive ? value.length > min : value.length >= min
             if (!isValid) {
                 const defaultMessage = options?.exclusive
@@ -243,7 +257,7 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
     }
 
     public max(max: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addValidationCheck(this, async (value: Infer<T>[], context: SchematicContext) => {
+        return addCheck(this, async (value: Infer<T>[], context: SchematicContext) => {
             const isValid = options?.exclusive ? value.length < max : value.length <= max
             if (!isValid) {
                 const defaultMessage = options?.exclusive

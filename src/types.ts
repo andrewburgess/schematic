@@ -40,6 +40,8 @@ export type ValidationCheck<TValue> = (
     context: SchematicContext
 ) => Promise<void> | void
 
+export type TestCheck<TValue> = (value: TValue) => Promise<boolean> | boolean
+
 export const INVALID = <T>(errors: SchematicError | SchematicError[]): SchematicParseResult<T> => ({
     errors: Array.isArray(errors) ? errors : [errors],
     isValid: false
@@ -55,7 +57,8 @@ export enum SchematicErrorType {
     TooBig = "TooBig",
     TooSmall = "TooSmall",
     UnrecognizedKey = "UnrecognizedKey",
-    UnrecognizedValue = "UnrecognizedValue"
+    UnrecognizedValue = "UnrecognizedValue",
+    ValidationError = "ValidationError"
 }
 
 interface BaseSchematicError {
@@ -114,6 +117,10 @@ export type SchematicUnrecognizedValueError = BaseSchematicError & {
     type: SchematicErrorType.UnrecognizedValue
 }
 
+export type SchematicValidationError = BaseSchematicError & {
+    type: SchematicErrorType.ValidationError
+}
+
 export type SchematicError =
     | SchematicInvalidExactValueError
     | SchematicInvalidIntersectionError
@@ -124,6 +131,7 @@ export type SchematicError =
     | SchematicTooSmallError
     | SchematicUnrecognizedKeyError
     | SchematicUnrecognizedValueError
+    | SchematicValidationError
 
 type SchematicParseFailure = {
     errors: SchematicError[]

@@ -9,7 +9,7 @@ import {
     SchematicOptions,
     SchematicParseResult
 } from "./types"
-import { addValidationCheck, withCoerce, withDefault } from "./util"
+import { addCheck, withCoerce, withDefault } from "./util"
 
 export class DateSchematic extends Schematic<Date> implements Coercable, Defaultable<Date> {
     /**
@@ -53,7 +53,7 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
     public max(max: number | Date, options?: SchematicOptions & { exclusive?: boolean }) {
         const maxDate = max instanceof Date ? max : new Date(max)
 
-        return addValidationCheck(this, async (value: Date, context: SchematicContext) => {
+        return addCheck(this, async (value: Date, context: SchematicContext) => {
             const isValid = options?.exclusive
                 ? value.getTime() < maxDate.getTime()
                 : value.getTime() <= maxDate.getTime()
@@ -77,7 +77,7 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
     public min(min: number | Date, options?: SchematicOptions & { exclusive?: boolean }) {
         const minDate = min instanceof Date ? min : new Date(min)
 
-        return addValidationCheck(this, async (value: Date, context: SchematicContext) => {
+        return addCheck(this, async (value: Date, context: SchematicContext) => {
             const isValid = options?.exclusive
                 ? value.getTime() > minDate.getTime()
                 : value.getTime() >= minDate.getTime()
