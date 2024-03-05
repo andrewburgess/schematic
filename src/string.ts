@@ -78,14 +78,18 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
 
     public min(min: number, options?: SchematicOptions & { exclusive?: boolean }) {
         return addValidationCheck(this, async (value: string, context: SchematicContext) => {
-            if (value.length < min) {
+            const isValid = options?.exclusive ? value.length > min : value.length >= min
+            if (!isValid) {
+                const defaultMessage = options?.exclusive
+                    ? `Expected string with length more than ${min} but received string with length ${value.length}`
+                    : `Expected string with length at least ${min} but received string with length ${value.length}`
                 context.addError(
                     createTooSmallError(
                         context.path,
                         value,
                         length,
                         options?.exclusive,
-                        options?.message
+                        options?.message ?? defaultMessage
                     )
                 )
             }
@@ -94,14 +98,18 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
 
     public max(max: number, options?: SchematicOptions & { exclusive?: boolean }) {
         return addValidationCheck(this, async (value: string, context: SchematicContext) => {
-            if (value.length > max) {
+            const isValid = options?.exclusive ? value.length < max : value.length <= max
+            if (!isValid) {
+                const defaultMessage = options?.exclusive
+                    ? `Expected string with length less than ${max} but received string with length ${value.length}`
+                    : `Expected string with length at most ${max} but received string with length ${value.length}`
                 context.addError(
                     createTooBigError(
                         context.path,
                         value,
                         length,
                         options?.exclusive,
-                        options?.message
+                        options?.message ?? defaultMessage
                     )
                 )
             }

@@ -33,7 +33,7 @@ test("should throw an error if the date is less than the minimum", async () => {
             return
         }
         expect(error.message).toBe(
-            "Expected value greater than or equal to 2021-01-01T00:00:00.000Z but received 2020-12-31T00:00:00.000Z"
+            "Expected Date on or after 2021-01-01T00:00:00.000Z but received 2020-12-31T00:00:00.000Z"
         )
     }
 })
@@ -47,7 +47,7 @@ test("should throw an error if the date is less than the exclusive minimum", asy
             return
         }
         expect(error.message).toBe(
-            "Expected value greater than 2021-01-01T00:00:00.000Z but received 2021-01-01T00:00:00.000Z"
+            "Expected Date after 2021-01-01T00:00:00.000Z but received 2021-01-01T00:00:00.000Z"
         )
     }
 })
@@ -66,7 +66,7 @@ test("should throw an error if the date is greater than the maximum", async () =
             return
         }
         expect(error.message).toBe(
-            "Expected value less than or equal to 2021-01-01T00:00:00.000Z but received 2021-01-02T00:00:00.000Z"
+            "Expected Date before or on 2021-01-01T00:00:00.000Z but received 2021-01-02T00:00:00.000Z"
         )
     }
 })
@@ -80,7 +80,7 @@ test("should throw an error if the date is greater than the exclusive maximum", 
             return
         }
         expect(error.message).toBe(
-            "Expected value less than 2021-01-01T00:00:00.000Z but received 2021-01-01T00:00:00.000Z"
+            "Expected Date before 2021-01-01T00:00:00.000Z but received 2021-01-01T00:00:00.000Z"
         )
     }
 })

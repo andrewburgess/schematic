@@ -52,3 +52,26 @@ test("should be able to pick fields from an object", async () => {
         expect(error.message).toBe("Unexpected key 'bar'")
     }
 })
+
+test("should be able to omit fields from an object", async () => {
+    const original = schematic.object({
+        foo: schematic.string(),
+        bar: schematic.number()
+    })
+
+    const omitted = original.omit("foo")
+
+    const result = await omitted.parse({ bar: 10 })
+
+    expect(result).toEqual({ bar: 10 })
+
+    try {
+        await omitted.parse({ foo: "foo", bar: 10 })
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.message).toBe("Unexpected key 'foo'")
+    }
+})

@@ -55,7 +55,18 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
                 ? value.getTime() < maxDate.getTime()
                 : value.getTime() <= maxDate.getTime()
             if (!isValid) {
-                context.addError(createTooBigError(context.path, value, max, options?.exclusive))
+                const defaultMessage = options?.exclusive
+                    ? `Expected Date before ${maxDate.toISOString()} but received ${value.toISOString()}`
+                    : `Expected Date before or on ${maxDate.toISOString()} but received ${value.toISOString()}`
+                context.addError(
+                    createTooBigError(
+                        context.path,
+                        value,
+                        max,
+                        options?.exclusive,
+                        options?.message ?? defaultMessage
+                    )
+                )
             }
         })
     }
@@ -68,7 +79,18 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
                 ? value.getTime() > minDate.getTime()
                 : value.getTime() >= minDate.getTime()
             if (!isValid) {
-                context.addError(createTooSmallError(context.path, value, min, options?.exclusive))
+                const defaultMessage = options?.exclusive
+                    ? `Expected Date after ${minDate.toISOString()} but received ${value.toISOString()}`
+                    : `Expected Date on or after ${minDate.toISOString()} but received ${value.toISOString()}`
+                context.addError(
+                    createTooSmallError(
+                        context.path,
+                        value,
+                        min,
+                        options?.exclusive,
+                        options?.message ?? defaultMessage
+                    )
+                )
             }
         })
     }
