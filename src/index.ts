@@ -12,9 +12,8 @@ import {
 import { NumberSchematic } from "./number"
 import { ObjectSchematic, SchematicObjectOptions, UnknownKeys } from "./object"
 import { RecordSchematic } from "./record"
-import { OptionalSchematic, Schematic } from "./schematic"
+import { ArraySchematic, OptionalSchematic, Schematic } from "./schematic"
 import { StringSchematic } from "./string"
-import { ArraySchematic } from "./array"
 
 export type {
     AnySchematic,

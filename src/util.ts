@@ -1,10 +1,10 @@
 import { Schematic } from "./schematic"
 import {
     CoerceSymbol,
-    type AssertEqual,
-    type Defaultable,
+    DefaultValueSymbol,
     ValidationCheck,
-    DefaultValueSymbol
+    type AssertEqual,
+    type Defaultable
 } from "./types"
 
 export const assertEqualType = <A, B>(value: AssertEqual<A, B>) => value
