@@ -13,6 +13,9 @@ export class BooleanSchematic
     extends Schematic<boolean>
     implements Coercable, Defaultable<boolean>
 {
+    /**
+     * @internal
+     */
     [DefaultValueSymbol]: boolean | (() => boolean) | undefined
 
     /**

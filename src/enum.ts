@@ -21,6 +21,9 @@ export class EnumSchematic<T extends EnumType>
     extends Schematic<EnumKeys<T>>
     implements Defaultable<EnumKeys<T>>
 {
+    /**
+     * @internal
+     */
     [DefaultValueSymbol]: EnumKeys<T> | (() => EnumKeys<T>) | undefined
 
     constructor(private readonly enumeration: T) {

@@ -12,6 +12,9 @@ import {
 import { addValidationCheck, withCoerce, withDefault } from "./util"
 
 export class NumberSchematic extends Schematic<number> implements Coercable, Defaultable<number> {
+    /**
+     * @internal
+     */
     [DefaultValueSymbol]: number | (() => number) | undefined
 
     /**
