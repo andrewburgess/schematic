@@ -28,7 +28,7 @@ export class RecordSchematic<TKey extends string | number = string, TValue = any
     /**
      * @internal
      */
-    async _parseType(
+    async _parse(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<Record<TKey, TValue>>> {

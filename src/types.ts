@@ -35,6 +35,11 @@ export interface Defaultable<TValue> {
 // #endregion
 
 // #region Schematic Validation
+export type TransformFn<TSchematic, TOutput> = (
+    value: Infer<TSchematic>,
+    context: SchematicContext
+) => TOutput | Promise<TOutput>
+
 export type ValidationCheck<TValue> = (
     value: TValue,
     context: SchematicContext

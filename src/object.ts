@@ -48,7 +48,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
     /**
      * @internal
      */
-    public async _parseType(
+    public async _parse(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<InferObject<T>>> {

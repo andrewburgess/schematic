@@ -28,7 +28,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     /**
      * @internal
      */
-    public async _parseType(
+    public async _parse(
         value: unknown = typeof this[DefaultValueSymbol] === "function"
             ? this[DefaultValueSymbol]()
             : this[DefaultValueSymbol],

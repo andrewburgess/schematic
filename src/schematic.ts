@@ -1,16 +1,19 @@
 import { addCheck, clone, mergeValues } from "./util"
 import {
-    SchematicParseError,
     createInvalidExactValueError,
     createInvalidTypeError,
     createTooBigError,
-    createTooSmallError
+    createTooSmallError,
+    SchematicParseError
 } from "./error"
 import {
     CoerceSymbol,
     INVALID,
     OutputSymbol,
     ShapeSymbol,
+    SchematicErrorType,
+    TestCheck,
+    TransformFn,
     TypeErrorSymbol,
     ValidationCheck,
     type AnySchematic,
@@ -18,9 +21,7 @@ import {
     type SchematicContext,
     type SchematicError,
     type SchematicOptions,
-    type SchematicParseResult,
-    SchematicErrorType,
-    TestCheck
+    type SchematicParseResult
 } from "./types"
 
 /**
@@ -69,7 +70,7 @@ export abstract class Schematic<T> {
      * @internal
      * @returns The result of the parsing
      */
-    abstract _parseType(value: unknown, context: SchematicContext): Promise<SchematicParseResult<T>>
+    abstract _parse(value: unknown, context: SchematicContext): Promise<SchematicParseResult<T>>
 
     /**
      * @internal
@@ -78,7 +79,7 @@ export abstract class Schematic<T> {
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<T>> {
-        let result = await this._parseType(value, context)
+        let result = await this._parse(value, context)
 
         if (!result.isValid) {
             return result
@@ -151,6 +152,18 @@ export abstract class Schematic<T> {
         throw new SchematicParseError(result.errors)
     }
 
+    /**
+     * Allows taking the result of an input schematic and piping it through a new schematic
+     * to run additional validation
+     * @param targetSchema New schema to use for validation
+     * @returns Piped schematic
+     */
+    public pipe<TOutput extends AnySchematic>(
+        targetSchema: TOutput
+    ): PipedSchematic<typeof this, TOutput> {
+        return new PipedSchematic(this, targetSchema)
+    }
+
     public test(check: TestCheck<T>, message?: string): this {
         return addCheck(this, async (value: T, context: SchematicContext) => {
             const result = await check(value)
@@ -162,6 +175,17 @@ export abstract class Schematic<T> {
                 })
             }
         })
+    }
+
+    /**
+     * Transforms an input value into a new output value
+     * @param fn Function to transform the input value to a new output value
+     * @returns Transformation schematic
+     */
+    public transform<TSchematic = this, TOutput = any>(
+        fn: TransformFn<TSchematic, TOutput>
+    ): Schematic<TOutput> {
+        return new TransformSchematic(this, fn)
     }
 }
 
@@ -179,7 +203,7 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
     /**
      * @internal
      */
-    async _parseType(
+    async _parse(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<Infer<T>[]>> {
@@ -299,7 +323,7 @@ export class IntersectionSchematic<
     /**
      * @internal
      */
-    async _parseType(
+    async _parse(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<T[typeof OutputSymbol] & U[typeof OutputSymbol]>> {
@@ -363,7 +387,7 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
     /**
      * @internal
      */
-    async _parseType(
+    async _parse(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<Infer<T> | undefined>> {
@@ -374,11 +398,87 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
             }
         }
 
-        return this[ShapeSymbol]._parseType(value, context)
+        return this[ShapeSymbol]._parse(value, context)
     }
 
     public required<T extends AnySchematic = this[typeof ShapeSymbol]>(): T {
         return this[ShapeSymbol] as unknown as T
+    }
+}
+
+export class PipedSchematic<
+    TInput extends AnySchematic,
+    TOutput extends AnySchematic
+> extends Schematic<Infer<TOutput>> {
+    private readonly inputSchema: TInput
+    private readonly outputSchema: TOutput
+
+    constructor(input: TInput, output: TOutput) {
+        super()
+
+        this.inputSchema = input
+        this.outputSchema = output
+    }
+
+    /**
+     * @internal
+     */
+    async _parse(
+        value: unknown,
+        context: SchematicContext
+    ): Promise<SchematicParseResult<Infer<TOutput>>> {
+        const parsed = await this.inputSchema.runValidation(value, context)
+
+        if (!parsed.isValid) {
+            return INVALID(parsed.errors)
+        }
+
+        return this.outputSchema.runValidation(parsed.value, context)
+    }
+}
+export class TransformSchematic<TInput extends AnySchematic, TOutput> extends Schematic<TOutput> {
+    private readonly schema: AnySchematic
+    private readonly transformFn: TransformFn<TInput, TOutput>
+
+    constructor(schema: AnySchematic, transform: TransformFn<TInput, TOutput>) {
+        super()
+
+        this.schema = schema
+        this.transformFn = transform
+    }
+
+    /**
+     * @internal
+     */
+    async _parse(
+        value: unknown,
+        context: SchematicContext
+    ): Promise<SchematicParseResult<TOutput>> {
+        const childContext: SchematicContext = {
+            addError: function (error) {
+                this.errors.push(error)
+            },
+            data: value,
+            errors: [],
+            path: context.path,
+            parent: context
+        }
+
+        const result = await this.schema.runValidation(value, childContext)
+
+        if (!result.isValid) {
+            return result
+        }
+
+        const transformed = await this.transformFn(result.value, childContext)
+        if (childContext.errors.length > 0) {
+            return INVALID(childContext.errors)
+        }
+
+        return {
+            isValid: true,
+            value: transformed
+        }
     }
 }
 
@@ -399,7 +499,7 @@ export class UnionSchematic<
     /**
      * @internal
      */
-    async _parseType(
+    async _parse(
         value: unknown,
         context: SchematicContext
     ): Promise<SchematicParseResult<T[number][typeof OutputSymbol]>> {

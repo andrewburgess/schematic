@@ -20,7 +20,7 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
     /**
      * @internal
      */
-    async _parseType(
+    async _parse(
         value: unknown = typeof this[DefaultValueSymbol] === "function"
             ? this[DefaultValueSymbol]()
             : this[DefaultValueSymbol],

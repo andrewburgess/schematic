@@ -20,7 +20,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
     /**
      * @internal
      */
-    async _parseType(
+    async _parse(
         value: unknown = typeof this[DefaultValueSymbol] === "function"
             ? this[DefaultValueSymbol]()
             : this[DefaultValueSymbol],

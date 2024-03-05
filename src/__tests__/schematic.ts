@@ -129,3 +129,64 @@ test("should allow intersection of schemas", async () => {
         expect(error.message).toBe("Value did not match all types")
     }
 })
+
+test("should allow adding basic testing of values", async () => {
+    const schema = schematic.boolean().test((value) => value === true, "Test failed")
+
+    const result = await schema.parse(true)
+
+    expect(result).toBe(true)
+
+    try {
+        await schema.parse(false)
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.message).toBe("Test failed")
+    }
+})
+
+test("should allow transforming a schematic from one value to another", async () => {
+    const booleanTransform = schematic.boolean().transform((value) => (value ? "yes" : "no"))
+
+    const booleanResult = await booleanTransform.parse(true)
+
+    expect(booleanResult).toBe("yes")
+})
+
+test("transform should allow validating value and returning a parse error", async () => {
+    const booleanTransform = schematic.boolean().transform((value, context) => {
+        if (value === false) {
+            context.addError({
+                expected: false,
+                message: "Value cannot be false",
+                received: value,
+                type: SchematicErrorType.InvalidExactValue
+            })
+        }
+        return value
+    })
+
+    try {
+        await booleanTransform.parse(false)
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.message).toBe("Value cannot be false")
+    }
+})
+
+test("should allow piping a schematic to another schematic", async () => {
+    const booleanPipe = schematic
+        .boolean()
+        .transform((value) => (value ? "true" : "false"))
+        .pipe(schematic.string().transform((value) => value.toUpperCase()))
+
+    const result = await booleanPipe.parse(true)
+
+    expect(result).toBe("TRUE")
+})
