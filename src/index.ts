@@ -1,14 +1,23 @@
 import { BooleanSchematic } from "./boolean"
 import { DateSchematic } from "./date"
 import { EnumSchematic } from "./enum"
-import { EnumType, Infer, SchematicObjectShape, SchematicError, SchematicOptions } from "./types"
+import {
+    AnySchematic,
+    EnumType,
+    Infer,
+    SchematicError,
+    SchematicObjectShape,
+    SchematicOptions
+} from "./types"
 import { NumberSchematic } from "./number"
 import { ObjectSchematic, SchematicObjectOptions, UnknownKeys } from "./object"
 import { RecordSchematic } from "./record"
 import { OptionalSchematic, Schematic } from "./schematic"
 import { StringSchematic } from "./string"
+import { ArraySchematic } from "./array"
 
 export type {
+    AnySchematic,
     BooleanSchematic,
     DateSchematic,
     EnumSchematic,
@@ -28,6 +37,7 @@ export { SchematicParseError } from "./error"
 const enumeration = <T extends EnumType>(enumeration: T) => new EnumSchematic(enumeration)
 
 export { enumeration as enum }
+export const array = <T extends AnySchematic>(shape: T) => new ArraySchematic(shape)
 export const boolean = (opts?: SchematicOptions) => new BooleanSchematic(opts)
 export const date = (opts?: SchematicOptions) => new DateSchematic(opts)
 export const number = (opts?: SchematicOptions) => new NumberSchematic(opts)

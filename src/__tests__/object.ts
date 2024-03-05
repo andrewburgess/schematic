@@ -1,4 +1,29 @@
 import * as schematic from "../"
+import { assertEqualType } from "../util"
+
+test("type parsing should be correct", async () => {
+    const optionalEntries = schematic.object({
+        foo: schematic.string(),
+        bar: schematic.object({
+            baz: schematic.number().optional()
+        }),
+        fizz: schematic
+            .object({
+                buzz: schematic.string()
+            })
+            .optional(),
+        buzz: schematic
+            .object({
+                fizz: schematic.array(schematic.string()).optional()
+            })
+            .optional()
+    })
+
+    assertEqualType<
+        schematic.Infer<typeof optionalEntries>,
+        { foo: string; bar?: { baz?: number }; fizz?: { buzz: string }; buzz?: { fizz?: string[] } }
+    >(true)
+})
 
 test("should parse an object", async () => {
     const schema = schematic.object({
