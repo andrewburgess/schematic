@@ -1,9 +1,10 @@
 {
-    "name": "schematic",
+    "name": "@andrewburgess/schematic",
     "version": "0.0.1",
     "description": "Schematic is a schema validator and transformer",
     "main": "./lib/index.js",
     "scripts": {
+        "build": "tsc",
         "lint": "eslint --cache --ext .ts ./src",
         "tsc": "tsc",
         "test": "jest"
