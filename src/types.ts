@@ -1,4 +1,4 @@
-import { Schematic } from "./schematic"
+import { OptionalSchematic, Schematic } from "./schematic"
 
 // #region Schematic Symbols
 export const CoerceSymbol = Symbol("coerce")
@@ -152,8 +152,25 @@ export type InferObject<T extends SchematicObjectShape> = Flatten<
         [key in OptionalKeys<T>]?: T[key][typeof OutputSymbol]
     }
 >
-export type SchematicOmit<T, K extends keyof T> = Identity<Flatten<Omit<T, K>>>
-export type SchematicPick<T, K extends keyof T> = Identity<Flatten<Pick<T, K>>>
+export type SchematicOmit<T, K extends keyof T> = Flatten<Omit<T, K>>
+export type SchematicPick<T, K extends keyof T> = Flatten<Pick<T, K>>
+
+export type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> = Flatten<
+    {
+        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<T[key]>
+            ? T[key]
+            : OptionalSchematic<T[key]>
+    } & {
+        [key in Exclude<keyof T, K>]: T[key]
+    }
+>
+export type SchematicRequired<T extends SchematicObjectShape, K extends keyof T> = Flatten<
+    {
+        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<any>
+            ? T[key][typeof ShapeSymbol]
+            : T[key]
+    } & Pick<T, Exclude<keyof T, K>>
+>
 
 export interface SchematicContext {
     addError(error: SchematicError): void

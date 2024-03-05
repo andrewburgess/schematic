@@ -4,9 +4,11 @@ import { assertEqualType } from "../util"
 test("type parsing should be correct", async () => {
     const optionalEntries = schematic.object({
         foo: schematic.string(),
-        bar: schematic.object({
-            baz: schematic.number().optional()
-        }),
+        bar: schematic
+            .object({
+                baz: schematic.number().optional()
+            })
+            .required("baz"),
         fizz: schematic
             .object({
                 buzz: schematic.string()
@@ -98,5 +100,74 @@ test("should be able to omit fields from an object", async () => {
             return
         }
         expect(error.message).toBe("Unexpected key 'foo'")
+    }
+})
+
+test("should allow making some keys partial", async () => {
+    const base = schematic.object({
+        foo: schematic.string(),
+        bar: schematic.number()
+    })
+
+    const partial = base.partial("foo")
+
+    const result = await partial.parse({ bar: 10 })
+
+    expect(result).toEqual({ bar: 10 })
+
+    try {
+        await partial.parse({ foo: "foo" })
+        expect(true).toBe(false)
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.message).toBe('"bar" is required')
+    }
+
+    const allPartial = base.partial()
+
+    const result2 = await allPartial.parse({})
+
+    expect(result2).toEqual({})
+})
+
+test("should allow making optional fields required", async () => {
+    const base = schematic.object({
+        foo: schematic.string().optional(),
+        bar: schematic.number()
+    })
+
+    const required = base.required("foo")
+
+    try {
+        await required.parse({ bar: 10 })
+        expect(true).toBe(false)
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.message).toBe('"foo" is required')
+    }
+
+    const result = await required.parse({ foo: "foo", bar: 10 })
+
+    expect(result).toEqual({ foo: "foo", bar: 10 })
+
+    const allRequired = base.required()
+
+    try {
+        await allRequired.parse({})
+        expect(true).toBe(false)
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.errors.length).toBe(2)
+        expect(error.errors[0].message).toBe('"foo" is required')
+        expect(error.errors[1].message).toBe('"bar" is required')
     }
 })

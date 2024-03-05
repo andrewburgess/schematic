@@ -1,4 +1,4 @@
-import { Schematic } from "./schematic"
+import { OptionalSchematic, Schematic } from "./schematic"
 import {
     InferObject,
     SchematicContext,
@@ -8,7 +8,9 @@ import {
     SchematicOmit,
     SchematicOptions,
     SchematicParseResult,
+    SchematicPartial,
     SchematicPick,
+    SchematicRequired,
     ShapeSymbol
 } from "./types"
 import { assertNever } from "./util"
@@ -121,27 +123,64 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
 
     public omit<K extends keyof InferObject<T>>(
         ...keys: K[]
-    ): Schematic<SchematicOmit<InferObject<T>, K>> {
+    ): ObjectSchematic<SchematicOmit<T, K>> {
         const shape: any = {}
         for (const key in this[ShapeSymbol]) {
             if (!keys.includes(key as any)) {
                 shape[key] = this[ShapeSymbol][key]
             }
         }
-        return new ObjectSchematic(shape, this.options) as unknown as Schematic<
-            SchematicOmit<InferObject<T>, K>
-        >
+        return new ObjectSchematic(shape, this.options)
+    }
+
+    public partial<K extends keyof InferObject<T> = keyof InferObject<T>>(
+        ...keys: K[]
+    ): ObjectSchematic<SchematicPartial<T, K>> {
+        const shape: any = {}
+
+        if (keys.length === 0) {
+            keys = Object.keys(this[ShapeSymbol]) as K[]
+        }
+
+        for (const key in this[ShapeSymbol]) {
+            if (keys.includes(key as any)) {
+                shape[key] = this[ShapeSymbol][key].optional()
+            } else {
+                shape[key] = this[ShapeSymbol][key]
+            }
+        }
+
+        return new ObjectSchematic(shape, this.options)
     }
 
     public pick<K extends keyof InferObject<T>>(
         ...keys: K[]
-    ): Schematic<SchematicPick<InferObject<T>, K>> {
+    ): ObjectSchematic<SchematicPick<T, K>> {
         const shape: any = {}
         for (const key of keys) {
             shape[key] = this[ShapeSymbol][key as any]
         }
-        return new ObjectSchematic(shape, this.options) as unknown as Schematic<
-            SchematicPick<InferObject<T>, K>
-        >
+        return new ObjectSchematic(shape, this.options)
+    }
+
+    public required<K extends keyof InferObject<T> = keyof InferObject<T>>(
+        ...keys: K[]
+    ): ObjectSchematic<SchematicRequired<T, K>> {
+        const shape: any = {}
+
+        if (keys.length === 0) {
+            keys = Object.keys(this[ShapeSymbol]) as K[]
+        }
+
+        for (const key in this[ShapeSymbol]) {
+            if (keys.includes(key as any) && this[ShapeSymbol][key] instanceof OptionalSchematic) {
+                const optional = this[ShapeSymbol][key] as unknown as OptionalSchematic<any>
+                shape[key] = optional[ShapeSymbol]
+            } else {
+                shape[key] = this[ShapeSymbol][key]
+            }
+        }
+
+        return new ObjectSchematic(shape, this.options)
     }
 }

@@ -68,31 +68,3 @@ test("should allow converting an optional schema to required", async () => {
         expect(error.message).toBe("Required")
     }
 })
-
-test("should allow marking a schema as required", async () => {
-    const schema = schematic.boolean().required()
-
-    try {
-        await schema.parse(undefined)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Required")
-    }
-})
-
-test("should allow marking a schema as required multiple times", async () => {
-    const schema = schematic.boolean().required().required().required()
-
-    try {
-        await schema.parse(undefined)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Required")
-    }
-})

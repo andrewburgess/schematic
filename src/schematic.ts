@@ -48,7 +48,7 @@ export abstract class Schematic<T> {
         message = message ?? this[TypeErrorSymbol]
 
         if (!message && typeof received === "undefined") {
-            message = "Required"
+            message = path.length > 0 ? `"${path.join(".")}" is required` : "Required"
         }
 
         return INVALID(createInvalidTypeError(path, type, received, message))
@@ -99,10 +99,6 @@ export abstract class Schematic<T> {
         }
 
         return new OptionalSchematic(cloned)
-    }
-
-    public required() {
-        return clone(this)
     }
 
     /**
