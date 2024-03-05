@@ -33,6 +33,10 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
     public readonly [ShapeSymbol]: T
     private readonly unknownKeys: UnknownKeys = UnknownKeys.Strip
 
+    public get shape(): T {
+        return this[ShapeSymbol]
+    }
+
     constructor(
         shape: T,
         private readonly options: SchematicObjectOptions = {}

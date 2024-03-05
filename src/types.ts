@@ -168,7 +168,7 @@ export type Identity<T> = T
 export type Flatten<T> = Identity<{ [key in keyof T]: T[key] }>
 
 type OptionalKeys<T extends SchematicObjectShape> = {
-    [key in keyof T]: undefined extends Infer<T[key]> ? (key extends symbol ? never : key) : never
+    [key in keyof T]: T[key] extends OptionalSchematic<any> ? key : never
 }[keyof T]
 
 type RequiredKeys<T extends SchematicObjectShape> = Exclude<string & keyof T, OptionalKeys<T>>
@@ -184,7 +184,7 @@ export type InferObject<T extends SchematicObjectShape> = Flatten<
 export type SchematicOmit<T, K extends keyof T> = Flatten<Omit<T, K>>
 export type SchematicPick<T, K extends keyof T> = Flatten<Pick<T, K>>
 
-export type SchematicExtend<T, U> = Omit<T, keyof U> & U
+export type SchematicExtend<T, U> = Flatten<Omit<T, keyof U> & U>
 export type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> = Flatten<
     {
         [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<T[key]>
