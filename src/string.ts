@@ -1,4 +1,9 @@
-import { createInvalidExactValueError, createTooBigError, createTooSmallError } from "./error"
+import {
+    createInvalidExactValueError,
+    createInvalidStringError,
+    createTooBigError,
+    createTooSmallError
+} from "./error"
 import { Schematic } from "./schematic"
 import {
     Coercable,
@@ -10,6 +15,9 @@ import {
     SchematicParseResult
 } from "./types"
 import { addValidationCheck, withCoerce, withDefault } from "./util"
+
+const EMAIL_REGEX =
+    /^(?!\.)(?!.*\.\.)([A-Z0-9_+-\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\-]*\.)+[A-Z]{2,}$/i
 
 export class StringSchematic extends Schematic<string> implements Coercable, Defaultable<string> {
     [DefaultValueSymbol]: string | (() => string) | undefined
@@ -60,6 +68,43 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
         return withDefault(this, defaultValue)
     }
 
+    public email(options?: SchematicOptions) {
+        return this.regex(EMAIL_REGEX, {
+            ...options,
+            message: options?.message ?? "Expected string to be a valid email address"
+        })
+    }
+
+    public endsWith(suffix: string, options?: SchematicOptions) {
+        return addValidationCheck(this, async (value: string, context: SchematicContext) => {
+            if (!value.endsWith(suffix)) {
+                context.addError(
+                    createInvalidStringError(
+                        context.path,
+                        value,
+                        options?.message ??
+                            `Expected string to end with ${suffix} but received ${value}`
+                    )
+                )
+            }
+        })
+    }
+
+    public includes(substring: string, options?: SchematicOptions) {
+        return addValidationCheck(this, async (value: string, context: SchematicContext) => {
+            if (!value.includes(substring)) {
+                context.addError(
+                    createInvalidStringError(
+                        context.path,
+                        value,
+                        options?.message ??
+                            `Expected string to include ${substring} but received ${value}`
+                    )
+                )
+            }
+        })
+    }
+
     public length(length: number, options?: SchematicOptions) {
         return addValidationCheck(this, async (value: string, context: SchematicContext) => {
             if (value.length !== length) {
@@ -87,7 +132,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
                     createTooSmallError(
                         context.path,
                         value,
-                        length,
+                        min,
                         options?.exclusive,
                         options?.message ?? defaultMessage
                     )
@@ -107,9 +152,39 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
                     createTooBigError(
                         context.path,
                         value,
-                        length,
+                        max,
                         options?.exclusive,
                         options?.message ?? defaultMessage
+                    )
+                )
+            }
+        })
+    }
+
+    public regex(regex: RegExp, options?: SchematicOptions) {
+        return addValidationCheck(this, async (value: string, context: SchematicContext) => {
+            if (!regex.test(value)) {
+                context.addError(
+                    createInvalidStringError(
+                        context.path,
+                        value,
+                        options?.message ??
+                            `Expected string to match ${regex} but received ${value}`
+                    )
+                )
+            }
+        })
+    }
+
+    public startsWith(prefix: string, options?: SchematicOptions) {
+        return addValidationCheck(this, async (value: string, context: SchematicContext) => {
+            if (!value.startsWith(prefix)) {
+                context.addError(
+                    createInvalidStringError(
+                        context.path,
+                        value,
+                        options?.message ??
+                            `Expected string to start with ${prefix} but received ${value}`
                     )
                 )
             }

@@ -26,6 +26,19 @@ export function createInvalidExactValueError(
     }
 }
 
+export function createInvalidStringError(
+    path: (string | number)[],
+    received: any,
+    message: string
+): SchematicError {
+    return {
+        message,
+        path,
+        received,
+        type: SchematicErrorType.InvalidString
+    }
+}
+
 export function createInvalidTypeError(
     path: (string | number)[],
     type: string,

@@ -48,6 +48,7 @@ export const VALID = <T>(value: T): SchematicParseResult<T> => ({ isValid: true,
 
 export enum SchematicErrorType {
     InvalidExactValue = "InvalidExactValue",
+    InvalidString = "InvalidString",
     InvalidType = "InvalidType",
     TooBig = "TooBig",
     TooSmall = "TooSmall",
@@ -63,6 +64,11 @@ interface BaseSchematicError {
 export type SchematicInvalidExactValueError = BaseSchematicError & {
     type: SchematicErrorType.InvalidExactValue
     expected: any
+    received: any
+}
+
+export type SchematicInvalidStringError = BaseSchematicError & {
+    type: SchematicErrorType.InvalidString
     received: any
 }
 
@@ -96,6 +102,7 @@ export type SchematicUnrecognizedValueError = BaseSchematicError & {
 
 export type SchematicError =
     | SchematicInvalidExactValueError
+    | SchematicInvalidStringError
     | SchematicInvalidTypeError
     | SchematicTooBigError
     | SchematicTooSmallError
