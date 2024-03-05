@@ -171,3 +171,18 @@ test("should allow making optional fields required", async () => {
         expect(error.errors[1].message).toBe('"bar" is required')
     }
 })
+
+test("should allow extending an object schema", async () => {
+    const base = schematic.object({
+        foo: schematic.string(),
+        bar: schematic.number()
+    })
+
+    const extended = base.extend({
+        baz: schematic.boolean()
+    })
+
+    const result = await extended.parse({ foo: "foo", bar: 10, baz: true })
+
+    expect(result).toEqual({ foo: "foo", bar: 10, baz: true })
+})

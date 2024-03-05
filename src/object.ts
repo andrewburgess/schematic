@@ -4,6 +4,7 @@ import {
     SchematicContext,
     SchematicError,
     SchematicErrorType,
+    SchematicExtend,
     SchematicObjectShape,
     SchematicOmit,
     SchematicOptions,
@@ -13,7 +14,7 @@ import {
     SchematicRequired,
     ShapeSymbol
 } from "./types"
-import { assertNever } from "./util"
+import { assertNever, clone } from "./util"
 
 export enum UnknownKeys {
     Allow = "allow",
@@ -26,6 +27,9 @@ export interface SchematicObjectOptions extends SchematicOptions {
 }
 
 export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<InferObject<T>> {
+    /**
+     * @internal
+     */
     public readonly [ShapeSymbol]: T
     private readonly unknownKeys: UnknownKeys = UnknownKeys.Strip
 
@@ -119,6 +123,24 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             isValid: true,
             value: result
         }
+    }
+
+    public extend<TExtend extends SchematicObjectShape>(
+        shape: TExtend
+    ): ObjectSchematic<SchematicExtend<T, TExtend>> {
+        const newShape: any = {}
+
+        for (const key in this[ShapeSymbol]) {
+            newShape[key] = clone(this[ShapeSymbol][key])
+        }
+
+        for (const key in shape) {
+            newShape[key] = clone(shape[key])
+        }
+
+        return new ObjectSchematic(newShape, this.options) as unknown as ObjectSchematic<
+            SchematicExtend<T, TExtend>
+        >
     }
 
     public omit<K extends keyof InferObject<T>>(

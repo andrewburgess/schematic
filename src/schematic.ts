@@ -1,4 +1,4 @@
-import { addValidationCheck, clone } from "./util"
+import { addValidationCheck, clone, mergeValues } from "./util"
 import {
     SchematicParseError,
     createInvalidExactValueError,
@@ -18,7 +18,8 @@ import {
     type SchematicContext,
     type SchematicError,
     type SchematicOptions,
-    type SchematicParseResult
+    type SchematicParseResult,
+    SchematicErrorType
 } from "./types"
 
 /**
@@ -35,7 +36,7 @@ export abstract class Schematic<T> {
     /**
      * @internal
      */
-    validationChecks: Array<ValidationCheck<T>> = []
+    validationChecks: Array<ValidationCheck<any>> = []
 
     constructor(options?: SchematicOptions) {
         this[CoerceSymbol] = options?.coerce
@@ -45,7 +46,7 @@ export abstract class Schematic<T> {
     /**
      * @internal
      */
-    createTypeParseError(
+    protected createTypeParseError(
         path: (string | number)[],
         type: string,
         received: any,
@@ -93,6 +94,10 @@ export abstract class Schematic<T> {
         return result
     }
 
+    public and<T extends AnySchematic>(schema: T): IntersectionSchematic<this, T> {
+        return new IntersectionSchematic(this, schema)
+    }
+
     public array<T extends AnySchematic>(): ArraySchematic<T> {
         const cloned = clone(this)
         if (cloned instanceof ArraySchematic) {
@@ -106,7 +111,7 @@ export abstract class Schematic<T> {
         return addValidationCheck(this, check)
     }
 
-    optional(): OptionalSchematic<this> {
+    public optional(): OptionalSchematic<this> {
         const cloned = clone(this)
 
         if (cloned instanceof OptionalSchematic) {
@@ -114,6 +119,10 @@ export abstract class Schematic<T> {
         }
 
         return new OptionalSchematic(cloned)
+    }
+
+    public or<T extends AnySchematic>(schema: T): UnionSchematic<[this, T]> {
+        return new UnionSchematic([this, schema])
     }
 
     /**
@@ -143,6 +152,9 @@ export abstract class Schematic<T> {
 }
 
 export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]> {
+    /**
+     * @internal
+     */
     public [ShapeSymbol]: T
 
     constructor(shape: T) {
@@ -150,6 +162,9 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
         this[ShapeSymbol] = shape
     }
 
+    /**
+     * @internal
+     */
     async _parseType(
         value: unknown,
         context: SchematicContext
@@ -253,10 +268,79 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
     }
 }
 
+export class IntersectionSchematic<
+    T extends AnySchematic,
+    U extends AnySchematic
+> extends Schematic<T[typeof OutputSymbol] & U[typeof OutputSymbol]> {
+    private readonly leftSchema: T
+    private readonly rightSchema: U
+
+    constructor(left: T, right: U) {
+        super()
+
+        this.leftSchema = left
+        this.rightSchema = right
+    }
+
+    /**
+     * @internal
+     */
+    async _parseType(
+        value: unknown,
+        context: SchematicContext
+    ): Promise<SchematicParseResult<T[typeof OutputSymbol] & U[typeof OutputSymbol]>> {
+        const leftContext: SchematicContext = {
+            addError: function (error) {
+                this.errors.push(error)
+            },
+            data: value,
+            errors: [],
+            path: context.path,
+            parent: context
+        }
+
+        const rightContext: SchematicContext = {
+            addError: function (error) {
+                this.errors.push(error)
+            },
+            data: value,
+            errors: [],
+            path: context.path,
+            parent: context
+        }
+
+        const [left, right] = await Promise.all([
+            this.leftSchema.runValidation(value, leftContext),
+            this.rightSchema.runValidation(value, rightContext)
+        ])
+
+        if (!left.isValid || !right.isValid) {
+            return INVALID({
+                errors: [left, right].flatMap((result) => (result.isValid ? [] : result.errors)),
+                message: this[TypeErrorSymbol] ?? "Value did not match all types",
+                received: value,
+                type: SchematicErrorType.InvalidIntersection
+            })
+        }
+
+        const merged = mergeValues(left.value, right.value)
+        if (!merged.isValid) {
+            return INVALID({
+                errors: [],
+                message: this[TypeErrorSymbol] ?? "Value did not match all types",
+                received: value,
+                type: SchematicErrorType.InvalidIntersection
+            })
+        }
+
+        return merged
+    }
+}
+
 export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T> | undefined> {
     public readonly [ShapeSymbol]: T
 
-    constructor(readonly schematic: T) {
+    constructor(schematic: T) {
         super()
 
         this[ShapeSymbol] = schematic
@@ -281,5 +365,58 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
 
     public required<T extends AnySchematic = this[typeof ShapeSymbol]>(): T {
         return this[ShapeSymbol] as unknown as T
+    }
+}
+
+export class UnionSchematic<
+    T extends Readonly<[AnySchematic, ...AnySchematic[]]>
+> extends Schematic<T[number][typeof OutputSymbol]> {
+    /**
+     * @internal
+     */
+    private readonly schemas: T
+
+    constructor(schemas: T) {
+        super()
+
+        this.schemas = schemas
+    }
+
+    /**
+     * @internal
+     */
+    async _parseType(
+        value: unknown,
+        context: SchematicContext
+    ): Promise<SchematicParseResult<T[number][typeof OutputSymbol]>> {
+        const results = await Promise.all(
+            this.schemas.map((schema) => {
+                const childContext: SchematicContext = {
+                    addError: function (error) {
+                        this.errors.push(error)
+                    },
+                    data: value,
+                    errors: [],
+                    path: context.path,
+                    parent: context
+                }
+                return schema.runValidation(value, childContext)
+            })
+        )
+
+        for (const result of results) {
+            if (result.isValid) {
+                return result
+            }
+        }
+
+        const unionErrors = results.flatMap((result) => (result.isValid ? [] : result.errors))
+
+        return INVALID({
+            errors: unionErrors,
+            message: this[TypeErrorSymbol] ?? "Value did not match any types",
+            received: value,
+            type: SchematicErrorType.InvalidUnion
+        })
     }
 }

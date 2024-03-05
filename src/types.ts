@@ -48,8 +48,10 @@ export const VALID = <T>(value: T): SchematicParseResult<T> => ({ isValid: true,
 
 export enum SchematicErrorType {
     InvalidExactValue = "InvalidExactValue",
+    InvalidIntersection = "InvalidIntersection",
     InvalidString = "InvalidString",
     InvalidType = "InvalidType",
+    InvalidUnion = "InvalidUnion",
     TooBig = "TooBig",
     TooSmall = "TooSmall",
     UnrecognizedKey = "UnrecognizedKey",
@@ -67,6 +69,12 @@ export type SchematicInvalidExactValueError = BaseSchematicError & {
     received: any
 }
 
+export type SchematicInvalidIntersectionError = BaseSchematicError & {
+    errors: SchematicError[]
+    received: any
+    type: SchematicErrorType.InvalidIntersection
+}
+
 export type SchematicInvalidStringError = BaseSchematicError & {
     type: SchematicErrorType.InvalidString
     received: any
@@ -75,6 +83,12 @@ export type SchematicInvalidStringError = BaseSchematicError & {
 export type SchematicInvalidTypeError = BaseSchematicError & {
     received: any
     type: SchematicErrorType.InvalidType
+}
+
+export type SchematicInvalidUnionError = BaseSchematicError & {
+    errors: SchematicError[]
+    received: any
+    type: SchematicErrorType.InvalidUnion
 }
 
 export type SchematicTooBigError = BaseSchematicError & {
@@ -102,8 +116,10 @@ export type SchematicUnrecognizedValueError = BaseSchematicError & {
 
 export type SchematicError =
     | SchematicInvalidExactValueError
+    | SchematicInvalidIntersectionError
     | SchematicInvalidStringError
     | SchematicInvalidTypeError
+    | SchematicInvalidUnionError
     | SchematicTooBigError
     | SchematicTooSmallError
     | SchematicUnrecognizedKeyError
@@ -155,6 +171,7 @@ export type InferObject<T extends SchematicObjectShape> = Flatten<
 export type SchematicOmit<T, K extends keyof T> = Flatten<Omit<T, K>>
 export type SchematicPick<T, K extends keyof T> = Flatten<Pick<T, K>>
 
+export type SchematicExtend<T, U> = Omit<T, keyof U> & U
 export type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> = Flatten<
     {
         [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<T[key]>

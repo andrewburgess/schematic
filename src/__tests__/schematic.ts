@@ -68,3 +68,64 @@ test("should allow converting an optional schema to required", async () => {
         expect(error.message).toBe("Required")
     }
 })
+
+test("should allow union of schemas", async () => {
+    const schema = schematic.boolean().or(schematic.number())
+
+    const numberResult = await schema.parse(5)
+    expect(numberResult).toBe(5)
+
+    const booleanResult = await schema.parse(true)
+    expect(booleanResult).toBe(true)
+
+    try {
+        await schema.parse("hello")
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.message).toBe("Value did not match any types")
+    }
+
+    const unions = schematic.union(schematic.boolean(), schematic.number(), schematic.string())
+
+    const stringResult = await unions.parse("hello")
+    expect(stringResult).toBe("hello")
+
+    const unionBooleanResult = await unions.parse(true)
+    expect(unionBooleanResult).toBe(true)
+
+    const unionNumberResult = await unions.parse(5)
+    expect(unionNumberResult).toBe(5)
+
+    try {
+        await unions.parse(null)
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.message).toBe("Value did not match any types")
+    }
+})
+
+test("should allow intersection of schemas", async () => {
+    const schema = schematic
+        .object({ a: schematic.boolean() })
+        .and(schematic.object({ b: schematic.number() }))
+
+    const result = await schema.parse({ a: true, b: 5 })
+
+    expect(result).toEqual({ a: true, b: 5 })
+
+    try {
+        await schema.parse({ a: true })
+    } catch (error) {
+        expect(error).toBeInstanceOf(schematic.SchematicParseError)
+        if (!(error instanceof schematic.SchematicParseError)) {
+            return
+        }
+        expect(error.message).toBe("Value did not match all types")
+    }
+})

@@ -12,7 +12,13 @@ import {
 import { NumberSchematic } from "./number"
 import { ObjectSchematic, SchematicObjectOptions, UnknownKeys } from "./object"
 import { RecordSchematic } from "./record"
-import { ArraySchematic, OptionalSchematic, Schematic } from "./schematic"
+import {
+    ArraySchematic,
+    IntersectionSchematic,
+    OptionalSchematic,
+    Schematic,
+    UnionSchematic
+} from "./schematic"
 import { StringSchematic } from "./string"
 
 export type {
@@ -33,33 +39,96 @@ export type {
 
 export { SchematicParseError } from "./error"
 
+/**
+ * Creates a validator the ensures a value is one of the provided enumeration values.
+ * @param enumeration Enumeration values to validate against
+ * @returns Validator of an Enum type
+ */
 const enumeration = <T extends EnumType>(enumeration: T) => new EnumSchematic(enumeration)
-
 export { enumeration as enum }
+/**
+ * Creates a validator that checks for an array, and then validates each of the elements of the array
+ * based on the provided `shape`.
+ * @param shape Schematic to validate elements of the Array
+ * @returns Validator of an Array type
+ */
 export const array = <T extends AnySchematic>(shape: T) => new ArraySchematic(shape)
+/**
+ * Creates a validator that ensures a value is a boolean.
+ * @param opts Configuration options for boolean validation
+ * @returns Validator of a Boolean type
+ */
 export const boolean = (opts?: SchematicOptions) => new BooleanSchematic(opts)
+/**
+ * Creates a validator that ensures a value is a date.
+ * @param opts Configuration options for date validation
+ * @returns Validator of a Date type
+ */
 export const date = (opts?: SchematicOptions) => new DateSchematic(opts)
+/**
+ * Creates a validator that checks a value is valid for _both_ the `left` and `right` validators.
+ * @param left The first validator to intersect
+ * @param right The second validator to intersect
+ * @returns Validator of an Intersection type
+ */
+export const intersection = <TLeft extends AnySchematic, TRight extends AnySchematic>(
+    left: TLeft,
+    right: TRight
+) => new IntersectionSchematic(left, right)
+/**
+ * Creates a validator that ensures a value is a number.
+ * @param opts Configuration options for number validation
+ * @returns Validator of a Number type
+ */
 export const number = (opts?: SchematicOptions) => new NumberSchematic(opts)
-export const object = <T extends SchematicObjectShape>(
-    shape: T,
-    options?: SchematicObjectOptions
-) => new ObjectSchematic(shape, options)
-
+/**
+ * Creates a validator that ensures the shape of an object is valid based on the provided `shape`.
+ * @param shape The shape of the object to be validated
+ * @param opts Configuration options for object validation
+ * @returns Validator of an Object type
+ */
+export const object = <T extends SchematicObjectShape>(shape: T, opts?: SchematicObjectOptions) =>
+    new ObjectSchematic(shape, opts)
+/**
+ * Creates a validator that can validate the keys and values of a record.
+ * @param keySchema Schema to validate the keys of the record
+ * @param valueSchema Schema to validate the values of the record
+ * @param opts Configuration options for record validation
+ * @returns Validator of a Record type
+ */
 export function record<TKey extends string | number, TValue>(
     keySchema: Schematic<TKey>,
     valueSchema: Schematic<TValue>,
-    options?: SchematicOptions
+    opts?: SchematicOptions
 ): RecordSchematic<TKey, TValue>
+/**
+ * Creates a validator that can validate values of a record. Defaults to using a string for the keys.
+ * @param valueSchema Schema to validate the values of the record
+ * @param opts Configuration options for record validation
+ * @returns Validator of a Record type
+ */
 export function record<TValue>(
     valueSchema: Schematic<TValue>,
-    options?: SchematicOptions
+    opts?: SchematicOptions
 ): RecordSchematic<string, TValue>
 export function record() {
     let [keySchema, valueSchema, options] = Array.from(arguments)
     if (keySchema instanceof Schematic && valueSchema instanceof Schematic) {
         return new RecordSchematic(keySchema, valueSchema, options)
     } else {
-        return new RecordSchematic(new StringSchematic(), keySchema, valueSchema)
+        return new RecordSchematic(string(), keySchema, valueSchema)
     }
 }
+/**
+ * Creates a validator that ensures a value is a string.
+ * @param opts Configuration options for string validation
+ * @returns Validator of a String type
+ */
 export const string = (opts?: SchematicOptions) => new StringSchematic(opts)
+/**
+ * Creates a validator that ensures the value matches at least _one_ of the provided schemas.
+ * @param schemas All of the schemas to check against
+ * @returns Validator of a Union type
+ */
+export const union = <T extends [AnySchematic, ...AnySchematic[]]>(...schemas: T) =>
+    new UnionSchematic(schemas)
