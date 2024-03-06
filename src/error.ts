@@ -55,6 +55,7 @@ export function createInvalidTypeError(
     }
     return {
         message: message ?? `Expected ${type} but received ${receivedType}`,
+        expected: type,
         path,
         received,
         type: SchematicErrorType.InvalidType

@@ -7,9 +7,17 @@ import {
     Infer,
     SchematicContext,
     SchematicError,
+    SchematicInvalidExactValueError,
+    SchematicInvalidIntersectionError,
+    SchematicInvalidStringError,
+    SchematicInvalidTypeError,
+    SchematicInvalidUnionError,
     SchematicObjectShape,
     SchematicOptions,
-    SchematicTestContext
+    SchematicTestContext,
+    SchematicTooBigError,
+    SchematicTooSmallError,
+    SchematicValidationError
 } from "./types"
 import { NumberSchematic } from "./number"
 import { ObjectSchematic, SchematicObjectOptions, UnknownKeys } from "./object"
@@ -39,8 +47,16 @@ export type {
     Schematic,
     SchematicContext,
     SchematicError,
+    SchematicInvalidExactValueError,
+    SchematicInvalidIntersectionError,
+    SchematicInvalidStringError,
+    SchematicInvalidTypeError,
+    SchematicInvalidUnionError,
     SchematicObjectOptions,
     SchematicTestContext,
+    SchematicTooBigError,
+    SchematicTooSmallError,
+    SchematicValidationError,
     StringSchematic,
     UnionSchematic,
     UnknownKeys

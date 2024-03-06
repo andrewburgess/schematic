@@ -161,6 +161,19 @@ export abstract class Schematic<T> {
         throw new SchematicParseError(result.errors)
     }
 
+    public async safeParse(value: unknown): Promise<SchematicParseResult<T>> {
+        try {
+            const result = await this.parse(value)
+            return VALID(result)
+        } catch (error) {
+            if (error instanceof SchematicParseError) {
+                return INVALID(error.errors)
+            }
+
+            throw error
+        }
+    }
+
     /**
      * Allows taking the result of an input schematic and piping it through a new schematic
      * to run additional validation
@@ -199,6 +212,8 @@ export abstract class Schematic<T> {
 }
 
 export class AnyValueSchematic extends Schematic<any> {
+    protected readonly _any = true as const
+
     /**
      * @internal
      */
@@ -381,6 +396,7 @@ export class IntersectionSchematic<
             return INVALID({
                 errors: [left, right].flatMap((result) => (result.isValid ? [] : result.errors)),
                 message: this[TypeErrorSymbol] ?? "Value did not match all types",
+                path: context.path,
                 received: value,
                 type: SchematicErrorType.InvalidIntersection
             })
@@ -391,6 +407,7 @@ export class IntersectionSchematic<
             return INVALID({
                 errors: [],
                 message: this[TypeErrorSymbol] ?? "Value did not match all types",
+                path: context.path,
                 received: value,
                 type: SchematicErrorType.InvalidIntersection
             })
@@ -424,6 +441,7 @@ export class LiteralSchematic<T extends string | number | boolean> extends Schem
 }
 
 export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T> | null> {
+    protected readonly _nullable = true as const
     public readonly [ShapeSymbol]: T
 
     constructor(schematic: T) {
@@ -467,7 +485,7 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
         return this[ShapeSymbol].runValidation(value, context)
     }
 
-    public required<T extends AnySchematic = this[typeof ShapeSymbol]>(): T {
+    public required<T extends AnySchematic = this["shape"]>(): T {
         const shape = this[ShapeSymbol]
 
         if (shape instanceof NullableSchematic || shape instanceof OptionalSchematic) {
@@ -479,6 +497,7 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
 }
 
 export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T> | undefined> {
+    protected readonly _optional = true as const
     /**
      * @internal
      */
@@ -525,7 +544,7 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
         return this[ShapeSymbol].runValidation(value, context)
     }
 
-    public required<T extends AnySchematic = this[typeof ShapeSymbol]>(): T {
+    public required<T extends AnySchematic = this["shape"]>(): T {
         const shape = this[ShapeSymbol]
 
         if (shape instanceof NullableSchematic || shape instanceof OptionalSchematic) {
@@ -659,6 +678,7 @@ export class UnionSchematic<
         return INVALID({
             errors: unionErrors,
             message: this[TypeErrorSymbol] ?? "Value did not match any types",
+            path: context.path,
             received: value,
             type: SchematicErrorType.InvalidUnion
         })

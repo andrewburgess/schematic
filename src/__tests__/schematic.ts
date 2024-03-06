@@ -7,6 +7,7 @@ test("should allow adding custom validator", async () => {
             context.addError({
                 expected: false,
                 message: "Value cannot be false",
+                path: context.path,
                 received: value,
                 type: SchematicErrorType.InvalidExactValue
             })
@@ -186,6 +187,7 @@ test("transform should allow validating value and returning a parse error", asyn
             context.addError({
                 expected: false,
                 message: "Value cannot be false",
+                path: context.path,
                 received: value,
                 type: SchematicErrorType.InvalidExactValue
             })

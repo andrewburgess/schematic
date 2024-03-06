@@ -23,7 +23,7 @@ test("type parsing should be correct", async () => {
 
     assertEqualType<
         schematic.Infer<typeof optionalEntries>,
-        { foo: string; bar?: { baz?: number }; fizz?: { buzz: string }; buzz?: { fizz?: string[] } }
+        { foo: string; bar: { baz?: number }; fizz?: { buzz: string }; buzz?: { fizz?: string[] } }
     >(true)
 })
 
@@ -227,4 +227,20 @@ test("can create enum from object keys", async () => {
     const result = await enumSchema.parse("foo")
 
     expect(result).toEqual("foo")
+})
+
+test("can merge two object schemas", async () => {
+    const base = schematic.object({
+        foo: schematic.string()
+    })
+
+    const other = schematic.object({
+        bar: schematic.number()
+    })
+
+    const merged = base.merge(other.pick("bar"))
+
+    const result = await merged.parse({ foo: "foo", bar: 10 })
+
+    expect(result).toEqual({ foo: "foo", bar: 10 })
 })

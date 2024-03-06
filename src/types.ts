@@ -1,4 +1,4 @@
-import { NullableSchematic, OptionalSchematic, Schematic } from "./schematic"
+import { AnyValueSchematic, NullableSchematic, OptionalSchematic, Schematic } from "./schematic"
 
 // #region Schematic Symbols
 export const CoerceSymbol = Symbol("coerce")
@@ -35,6 +35,16 @@ export interface Defaultable<TValue> {
 // #endregion
 
 // #region Schematic Validation
+export interface SchematicContext {
+    addError(error: SchematicError): void
+    readonly data?: any
+    readonly errors: SchematicError[]
+    readonly path: (string | number)[]
+    readonly parent?: SchematicContext | null
+}
+
+export type SchematicTestContext = Pick<SchematicContext, "addError" | "path">
+
 export type TransformFn<TSchematic, TOutput> = (
     value: Infer<TSchematic>,
     context: SchematicTestContext
@@ -70,7 +80,7 @@ export enum SchematicErrorType {
 
 interface BaseSchematicError {
     message: string
-    path?: (string | number)[]
+    path: (string | number)[]
 }
 
 export type SchematicInvalidExactValueError = BaseSchematicError & {
@@ -91,6 +101,7 @@ export type SchematicInvalidStringError = BaseSchematicError & {
 }
 
 export type SchematicInvalidTypeError = BaseSchematicError & {
+    expected: any
     received: any
     type: SchematicErrorType.InvalidType
 }
@@ -170,7 +181,11 @@ export type Identity<T> = T
 export type Flatten<T> = Identity<{ [key in keyof T]: T[key] }>
 
 type OptionalKeys<T extends SchematicObjectShape> = {
-    [key in keyof T]: T[key] extends OptionalSchematic<any> ? key : never
+    [key in keyof T]: T[key] extends OptionalSchematic<any>
+        ? key
+        : T[key] extends AnyValueSchematic
+          ? key
+          : never
 }[keyof T]
 
 type RequiredKeys<T extends SchematicObjectShape> = Exclude<string & keyof T, OptionalKeys<T>>
@@ -197,29 +212,17 @@ export type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> 
     }
 >
 
-type RemoveNullableOptional<T> = T extends NullableSchematic<infer U> | OptionalSchematic<infer U>
-    ? RemoveNullableOptional<U>
-    : T
+type RemoveOptional<T> = T extends OptionalSchematic<infer U> ? RemoveOptional<U> : T
 
 export type SchematicRequired<T extends SchematicObjectShape, K extends keyof T> = Flatten<
     {
         [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<any>
-            ? RemoveNullableOptional<T[key]["shape"]>
+            ? RemoveOptional<T[key]["shape"]>
             : T[key] extends NullableSchematic<any>
-              ? RemoveNullableOptional<T[key]["shape"]>
+              ? NullableSchematic<RemoveOptional<T[key]["shape"]>>
               : T[key]
     } & Pick<T, Exclude<keyof T, K>>
 >
-
-export interface SchematicContext {
-    addError(error: SchematicError): void
-    readonly data?: any
-    readonly errors: SchematicError[]
-    readonly path: (string | number)[]
-    readonly parent?: SchematicContext | null
-}
-
-export type SchematicTestContext = Pick<SchematicContext, "addError" | "path">
 
 export type SchematicObjectShape = {
     [key: string]: AnySchematic

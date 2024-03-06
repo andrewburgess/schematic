@@ -159,12 +159,12 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         return new EnumSchematic(keys) as unknown as EnumSchematic<UnionToTupleString<keyof T>>
     }
 
-    public merge<TMerge extends ObjectSchematic<any>, TShape extends TMerge[typeof ShapeSymbol]>(
+    public merge<TMerge extends ObjectSchematic<any>, TShape extends TMerge["shape"]>(
         shape: TMerge
     ): ObjectSchematic<SchematicExtend<T, TShape>> {
         const newShape: any = {
             ...this[ShapeSymbol],
-            ...shape
+            ...shape[ShapeSymbol]
         }
 
         return new ObjectSchematic(newShape, this.options) as unknown as ObjectSchematic<
