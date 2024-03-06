@@ -51,7 +51,11 @@ export class EnumSchematic<T extends EnumType>
             }
         }
 
-        return INVALID([createUnrecognizedValueError(context.path, value, this.enumeration)])
+        if (typeof value === "undefined") {
+            return this.createTypeParseError(context.path, "enum", value)
+        }
+
+        return INVALID(createUnrecognizedValueError(context.path, value, this.enumeration))
     }
 
     public default(defaultValue: EnumKeys<T> | (() => EnumKeys<T>)): EnumSchematic<T> {

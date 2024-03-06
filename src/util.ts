@@ -1,10 +1,13 @@
+import { createInvalidExactValueError } from "./error"
 import { Schematic } from "./schematic"
 import {
     CoerceSymbol,
     DefaultValueSymbol,
     ValidationCheck,
     type AssertEqual,
-    type Defaultable
+    type Defaultable,
+    SchematicParseResult,
+    SchematicContext
 } from "./types"
 
 export const assertEqualType = <A, B>(value: AssertEqual<A, B>) => value
@@ -53,8 +56,9 @@ export function isObject(value: unknown): value is object {
 
 export function mergeValues(
     left: any,
-    right: any
-): { isValid: true; value: any } | { isValid: false } {
+    right: any,
+    context: SchematicContext
+): SchematicParseResult<any> {
     if (left === right) {
         return { isValid: true, value: left }
     }
@@ -67,7 +71,10 @@ export function mergeValues(
         for (const key of sharedKeys) {
             const leftValue = (left as any)[key]
             const rightValue = (right as any)[key]
-            const result = mergeValues(leftValue, rightValue)
+            const result = mergeValues(leftValue, rightValue, {
+                ...context,
+                path: context.path.concat(key)
+            })
             if (!result.isValid) {
                 return result
             }
@@ -79,14 +86,27 @@ export function mergeValues(
 
     if (isArray(left) && isArray(right)) {
         if (left.length !== right.length) {
-            return { isValid: false }
+            return {
+                isValid: false,
+                errors: [
+                    createInvalidExactValueError(
+                        [],
+                        left.length,
+                        right.length,
+                        "Merged arrays have different lengths"
+                    )
+                ]
+            }
         }
 
         const arr: any[] = []
         for (let i = 0; i < left.length; i++) {
             const leftItem = left[i]
             const rightItem = right[i]
-            const shared = mergeValues(leftItem, rightItem)
+            const shared = mergeValues(leftItem, rightItem, {
+                ...context,
+                path: context.path.concat(i)
+            })
 
             if (!shared.isValid) {
                 return shared
@@ -100,13 +120,13 @@ export function mergeValues(
 
     if (isDate(left) && isDate(right)) {
         if (left.getTime() !== right.getTime()) {
-            return { isValid: false }
+            return { isValid: false, errors: [createInvalidExactValueError([], left, right)] }
         }
 
         return { isValid: true, value: left }
     }
 
-    return { isValid: false }
+    return { isValid: false, errors: [createInvalidExactValueError([], left, right)] }
 }
 
 export function withCoerce<TSchematic extends Schematic<any>>(schematic: TSchematic) {

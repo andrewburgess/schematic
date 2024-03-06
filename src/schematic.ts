@@ -96,10 +96,10 @@ export abstract class Schematic<T> {
     }
 
     public and<T extends AnySchematic>(schema: T): IntersectionSchematic<this, T> {
-        return new IntersectionSchematic(this, schema)
+        return new IntersectionSchematic(clone(this), clone(schema))
     }
 
-    public array<T extends AnySchematic>(): ArraySchematic<T> {
+    public array<T extends AnySchematic = this>(): ArraySchematic<T> {
         const cloned = clone(this)
         if (cloned instanceof ArraySchematic) {
             return this as unknown as ArraySchematic<T>
@@ -133,7 +133,7 @@ export abstract class Schematic<T> {
     }
 
     public or<T extends AnySchematic>(schema: T): UnionSchematic<[this, T]> {
-        return new UnionSchematic([this, schema])
+        return new UnionSchematic([clone(this), clone(schema)])
     }
 
     /**
@@ -393,24 +393,15 @@ export class IntersectionSchematic<
         ])
 
         if (!left.isValid || !right.isValid) {
-            return INVALID({
-                errors: [left, right].flatMap((result) => (result.isValid ? [] : result.errors)),
-                message: this[TypeErrorSymbol] ?? "Value did not match all types",
-                path: context.path,
-                received: value,
-                type: SchematicErrorType.InvalidIntersection
-            })
+            const intersectionErrors = [left, right].flatMap((result) =>
+                result.isValid ? [] : result.errors
+            )
+            return INVALID(intersectionErrors)
         }
 
-        const merged = mergeValues(left.value, right.value)
+        const merged = mergeValues(left.value, right.value, context)
         if (!merged.isValid) {
-            return INVALID({
-                errors: [],
-                message: this[TypeErrorSymbol] ?? "Value did not match all types",
-                path: context.path,
-                received: value,
-                type: SchematicErrorType.InvalidIntersection
-            })
+            return INVALID(merged.errors)
         }
 
         return merged
@@ -675,12 +666,14 @@ export class UnionSchematic<
 
         const unionErrors = results.flatMap((result) => (result.isValid ? [] : result.errors))
 
-        return INVALID({
-            errors: unionErrors,
-            message: this[TypeErrorSymbol] ?? "Value did not match any types",
-            path: context.path,
-            received: value,
-            type: SchematicErrorType.InvalidUnion
-        })
+        return INVALID([
+            {
+                message: this[TypeErrorSymbol] ?? "Value did not match any types",
+                path: context.path,
+                received: value,
+                type: SchematicErrorType.InvalidUnion
+            },
+            ...unionErrors
+        ])
     }
 }

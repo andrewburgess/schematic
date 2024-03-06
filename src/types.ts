@@ -90,7 +90,6 @@ export type SchematicInvalidExactValueError = BaseSchematicError & {
 }
 
 export type SchematicInvalidIntersectionError = BaseSchematicError & {
-    errors: SchematicError[]
     received: any
     type: SchematicErrorType.InvalidIntersection
 }
@@ -107,7 +106,6 @@ export type SchematicInvalidTypeError = BaseSchematicError & {
 }
 
 export type SchematicInvalidUnionError = BaseSchematicError & {
-    errors: SchematicError[]
     received: any
     type: SchematicErrorType.InvalidUnion
 }

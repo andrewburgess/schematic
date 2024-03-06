@@ -1,3 +1,4 @@
+import assert from "assert"
 import * as schematic from "../"
 import { SchematicErrorType } from "../types"
 
@@ -103,15 +104,9 @@ test("should allow union of schemas", async () => {
     const booleanResult = await schema.parse(true)
     expect(booleanResult).toBe(true)
 
-    try {
-        await schema.parse("hello")
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Value did not match any types")
-    }
+    const invalidResult = await schema.safeParse("hello")
+    assert(!invalidResult.isValid)
+    expect(invalidResult.errors[0].message).toBe("Value did not match any types")
 
     const unions = schematic.union(schematic.boolean(), schematic.number(), schematic.string())
 
@@ -124,15 +119,9 @@ test("should allow union of schemas", async () => {
     const unionNumberResult = await unions.parse(5)
     expect(unionNumberResult).toBe(5)
 
-    try {
-        await unions.parse(null)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Value did not match any types")
-    }
+    const invalidUnionsResult = await unions.safeParse(null)
+    assert(!invalidUnionsResult.isValid)
+    expect(invalidUnionsResult.errors[0].message).toBe("Value did not match any types")
 })
 
 test("should allow intersection of schemas", async () => {
@@ -144,15 +133,9 @@ test("should allow intersection of schemas", async () => {
 
     expect(result).toEqual({ a: true, b: 5 })
 
-    try {
-        await schema.parse({ a: true })
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Value did not match all types")
-    }
+    const invalidResult = await schema.safeParse({ a: true })
+    assert(!invalidResult.isValid)
+    expect(invalidResult.errors[0].message).toBe('"b" is required')
 })
 
 test("should allow adding basic testing of values", async () => {
