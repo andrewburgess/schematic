@@ -27,8 +27,15 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
             : this[DefaultValueSymbol],
         context: SchematicContext
     ): Promise<SchematicParseResult<Date>> {
+        if (value === null || value === undefined) {
+            return this.createTypeParseError(context.path, "Date", value)
+        }
+
         if (this[CoerceSymbol]) {
-            if (!(value instanceof Date)) {
+            if (
+                (!(value instanceof Date) && typeof value === "string") ||
+                typeof value === "number"
+            ) {
                 value = new Date(value as any)
             }
         }
