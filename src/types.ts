@@ -73,7 +73,7 @@ export enum SchematicErrorType {
     InvalidUnion = "InvalidUnion",
     TooBig = "TooBig",
     TooSmall = "TooSmall",
-    UnrecognizedKey = "UnrecognizedKey",
+    UnrecognizedKeys = "UnrecognizedKeys",
     UnrecognizedValue = "UnrecognizedValue",
     ValidationError = "ValidationError"
 }
@@ -114,19 +114,19 @@ export type SchematicInvalidUnionError = BaseSchematicError & {
 
 export type SchematicTooBigError = BaseSchematicError & {
     type: SchematicErrorType.TooBig
-    max: number | Date
+    maximum: number | Date
     received: any
 }
 
 export type SchematicTooSmallError = BaseSchematicError & {
     type: SchematicErrorType.TooSmall
-    min: number | Date
+    minimum: number | Date
     received: any
 }
 
-export type SchematicUnrecognizedKeyError = BaseSchematicError & {
-    key: string
-    type: SchematicErrorType.UnrecognizedKey
+export type SchematicUnrecognizedKeysError = BaseSchematicError & {
+    keys: Array<string | number>
+    type: SchematicErrorType.UnrecognizedKeys
 }
 
 export type SchematicUnrecognizedValueError = BaseSchematicError & {
@@ -147,7 +147,7 @@ export type SchematicError =
     | SchematicInvalidUnionError
     | SchematicTooBigError
     | SchematicTooSmallError
-    | SchematicUnrecognizedKeyError
+    | SchematicUnrecognizedKeysError
     | SchematicUnrecognizedValueError
     | SchematicValidationError
 

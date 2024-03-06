@@ -17,6 +17,8 @@ import {
     SchematicTestContext,
     SchematicTooBigError,
     SchematicTooSmallError,
+    SchematicUnrecognizedKeysError,
+    SchematicUnrecognizedValueError,
     SchematicValidationError
 } from "./types"
 import { NumberSchematic } from "./number"
@@ -56,6 +58,8 @@ export type {
     SchematicTestContext,
     SchematicTooBigError,
     SchematicTooSmallError,
+    SchematicUnrecognizedKeysError,
+    SchematicUnrecognizedValueError,
     SchematicValidationError,
     StringSchematic,
     UnionSchematic,

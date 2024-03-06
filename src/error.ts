@@ -79,7 +79,7 @@ export function createTooBigError(
         message,
         path,
         received,
-        max,
+        maximum: max,
         type: SchematicErrorType.TooBig
     }
 }
@@ -101,7 +101,7 @@ export function createTooSmallError(
         message,
         path,
         received,
-        min,
+        minimum: min,
         type: SchematicErrorType.TooSmall
     }
 }

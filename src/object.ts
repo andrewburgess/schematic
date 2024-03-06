@@ -88,9 +88,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
 
             const parsed = await schematic.runValidation(val, childContext)
 
-            if (parsed.isValid) {
+            if (parsed.isValid && parsed.value !== undefined) {
                 result[key] = parsed.value
-            } else {
+            } else if (!parsed.isValid) {
                 valid = false
                 errors.push(...parsed.errors)
             }
@@ -105,16 +105,13 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
                     break
                 case UnknownKeys.Reject:
                     valid = false
-                    errors.push(
-                        ...unknownKeys.map(
-                            (key): SchematicError => ({
-                                message: `Unrecognized key "${key}"`,
-                                path: context.path,
-                                key,
-                                type: SchematicErrorType.UnrecognizedKey
-                            })
-                        )
-                    )
+                    errors.push({
+                        message: `Unrecognized key "${unknownKeys.join('", "')}"`,
+                        path: context.path,
+                        keys: unknownKeys,
+                        type: SchematicErrorType.UnrecognizedKeys
+                    })
+
                     break
                 case UnknownKeys.Strip:
                     break
