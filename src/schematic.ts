@@ -47,7 +47,7 @@ export abstract class Schematic<T> {
     /**
      * @internal
      */
-    protected createTypeParseError(
+    protected _createTypeParseError(
         path: (string | number)[],
         type: string,
         received: any,
@@ -248,7 +248,7 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
         context: SchematicContext
     ): Promise<SchematicParseResult<Infer<T>[]>> {
         if (typeof value !== "object" || !Array.isArray(value)) {
-            return this.createTypeParseError(context.path, "array", value)
+            return this._createTypeParseError(context.path, "array", value)
         }
 
         const errors: SchematicError[] = []
@@ -471,6 +471,10 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
                 isValid: true,
                 value: null
             }
+        }
+
+        if (value === undefined && !(this[ShapeSymbol] instanceof OptionalSchematic)) {
+            return this._createTypeParseError(context.path, "nullable", value)
         }
 
         return this[ShapeSymbol].runValidation(value, context)

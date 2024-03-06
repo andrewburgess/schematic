@@ -37,7 +37,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
         }
 
         if (typeof value !== "number") {
-            return this.createTypeParseError(context.path, "number", value)
+            return this._createTypeParseError(context.path, "number", value)
         }
 
         return {

@@ -49,7 +49,7 @@ export class BooleanSchematic
         }
 
         if (typeof value !== "boolean") {
-            return this.createTypeParseError(context.path, "boolean", value)
+            return this._createTypeParseError(context.path, "boolean", value)
         }
 
         return {

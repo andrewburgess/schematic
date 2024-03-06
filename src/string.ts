@@ -55,7 +55,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
         }
 
         if (typeof value !== "string") {
-            return this.createTypeParseError(context.path, "string", value)
+            return this._createTypeParseError(context.path, "string", value)
         }
 
         return {

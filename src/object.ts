@@ -64,7 +64,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             typeof value !== "undefined" &&
             (typeof value !== "object" || value === null || Array.isArray(value))
         ) {
-            return this.createTypeParseError(context.path, "object", value)
+            return this._createTypeParseError(context.path, "object", value)
         }
 
         const errors: SchematicError[] = []

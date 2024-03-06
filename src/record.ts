@@ -30,7 +30,7 @@ export class RecordSchematic<TKeySchema extends AnySchematic, TValue = any> exte
         context: SchematicContext
     ): Promise<SchematicParseResult<Record<string | number, TValue>>> {
         if (typeof value !== "object" || value === null) {
-            return this.createTypeParseError(context.path, "object", value)
+            return this._createTypeParseError(context.path, "object", value)
         }
 
         const errors: SchematicError[] = []

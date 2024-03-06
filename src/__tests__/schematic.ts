@@ -50,23 +50,23 @@ test("should allow specifying a nullable type", async () => {
     const schema = schematic.boolean().nullable()
 
     const result = await schema.parse(null)
-
     expect(result).toBeNull()
 
     const result2 = await schema.parse(true)
-
     expect(result2).toBe(true)
+
+    const undefinedResult = await schema.safeParse(undefined)
+    assert(!undefinedResult.isValid)
+    expect(undefinedResult.errors[0].message).toBe("Required")
 })
 
 test("should allow specifying nullable multiple times", async () => {
     const schema = schematic.boolean().nullable().nullable().nullable()
 
     const result = await schema.parse(null)
-
     expect(result).toBeNull()
 
     const result2 = await schema.parse(true)
-
     expect(result2).toBe(true)
 })
 

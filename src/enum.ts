@@ -52,7 +52,7 @@ export class EnumSchematic<T extends EnumType>
         }
 
         if (typeof value === "undefined") {
-            return this.createTypeParseError(context.path, "enum", value)
+            return this._createTypeParseError(context.path, "enum", value)
         }
 
         return INVALID(createUnrecognizedValueError(context.path, value, this.enumeration))

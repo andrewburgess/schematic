@@ -28,7 +28,7 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
         context: SchematicContext
     ): Promise<SchematicParseResult<Date>> {
         if (value === null || value === undefined) {
-            return this.createTypeParseError(context.path, "Date", value)
+            return this._createTypeParseError(context.path, "Date", value)
         }
 
         if (this[CoerceSymbol]) {
@@ -41,7 +41,7 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
         }
 
         if (!(value instanceof Date) || isNaN(value.getTime())) {
-            return this.createTypeParseError(context.path, "Date", value)
+            return this._createTypeParseError(context.path, "Date", value)
         }
 
         return {
