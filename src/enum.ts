@@ -30,6 +30,10 @@ export class EnumSchematic<T extends EnumType>
         super()
     }
 
+    public get shape(): T {
+        return this.enumeration
+    }
+
     /**
      * @internal
      */

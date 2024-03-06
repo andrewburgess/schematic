@@ -1,4 +1,4 @@
-import { OptionalSchematic, Schematic } from "./schematic"
+import { NullableSchematic, OptionalSchematic, Schematic } from "./schematic"
 
 // #region Schematic Symbols
 export const CoerceSymbol = Symbol("coerce")
@@ -37,12 +37,12 @@ export interface Defaultable<TValue> {
 // #region Schematic Validation
 export type TransformFn<TSchematic, TOutput> = (
     value: Infer<TSchematic>,
-    context: SchematicContext
+    context: SchematicTestContext
 ) => TOutput | Promise<TOutput>
 
 export type ValidationCheck<TValue> = (
     value: TValue,
-    context: SchematicContext
+    context: SchematicTestContext
 ) => Promise<void> | void
 
 export type TestCheck<TValue> = (value: TValue) => Promise<boolean> | boolean
@@ -52,6 +52,8 @@ export const INVALID = <T>(errors: SchematicError | SchematicError[]): Schematic
     isValid: false
 })
 export const VALID = <T>(value: T): SchematicParseResult<T> => ({ isValid: true, value })
+
+export const NEVER = INVALID as never
 
 export enum SchematicErrorType {
     InvalidExactValue = "InvalidExactValue",
@@ -194,22 +196,47 @@ export type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> 
         [key in Exclude<keyof T, K>]: T[key]
     }
 >
+
+type RemoveNullableOptional<T> = T extends NullableSchematic<infer U> | OptionalSchematic<infer U>
+    ? RemoveNullableOptional<U>
+    : T
+
 export type SchematicRequired<T extends SchematicObjectShape, K extends keyof T> = Flatten<
     {
         [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<any>
-            ? T[key][typeof ShapeSymbol]
-            : T[key]
+            ? RemoveNullableOptional<T[key]["shape"]>
+            : T[key] extends NullableSchematic<any>
+              ? RemoveNullableOptional<T[key]["shape"]>
+              : T[key]
     } & Pick<T, Exclude<keyof T, K>>
 >
 
 export interface SchematicContext {
     addError(error: SchematicError): void
-    readonly data: any
+    readonly data?: any
     readonly errors: SchematicError[]
     readonly path: (string | number)[]
-    readonly parent: SchematicContext | null
+    readonly parent?: SchematicContext | null
 }
+
+export type SchematicTestContext = Pick<SchematicContext, "addError" | "path">
 
 export type SchematicObjectShape = {
     [key: string]: AnySchematic
 }
+
+type UnionToIntersectionFn<T> = (T extends unknown ? (k: () => T) => void : never) extends (
+    k: infer Intersection
+) => void
+    ? Intersection
+    : never
+
+type GetUnionLast<T> = UnionToIntersectionFn<T> extends () => infer Last ? Last : never
+
+type UnionToTuple<T, Tuple extends unknown[] = []> = [T] extends [never]
+    ? Tuple
+    : UnionToTuple<Exclude<T, GetUnionLast<T>>, [GetUnionLast<T>, ...Tuple]>
+
+type CastToStringTuple<T> = T extends [string, ...string[]] ? T : never
+
+export type UnionToTupleString<T> = CastToStringTuple<UnionToTuple<T>>

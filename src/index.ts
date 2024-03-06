@@ -5,16 +5,20 @@ import {
     AnySchematic,
     EnumType,
     Infer,
+    SchematicContext,
     SchematicError,
     SchematicObjectShape,
-    SchematicOptions
+    SchematicOptions,
+    SchematicTestContext
 } from "./types"
 import { NumberSchematic } from "./number"
 import { ObjectSchematic, SchematicObjectOptions, UnknownKeys } from "./object"
 import { RecordSchematic } from "./record"
 import {
+    AnyValueSchematic,
     ArraySchematic,
     IntersectionSchematic,
+    LiteralSchematic,
     OptionalSchematic,
     Schematic,
     UnionSchematic
@@ -27,17 +31,23 @@ export type {
     DateSchematic,
     EnumSchematic,
     Infer,
+    IntersectionSchematic,
+    LiteralSchematic,
     NumberSchematic,
     ObjectSchematic,
     OptionalSchematic,
     Schematic,
+    SchematicContext,
     SchematicError,
     SchematicObjectOptions,
+    SchematicTestContext,
     StringSchematic,
+    UnionSchematic,
     UnknownKeys
 }
 
 export { SchematicParseError } from "./error"
+export { NEVER, SchematicErrorType } from "./types"
 
 /**
  * Creates a validator the ensures a value is one of the provided enumeration values.
@@ -46,6 +56,11 @@ export { SchematicParseError } from "./error"
  */
 const enumeration = <T extends EnumType>(enumeration: T) => new EnumSchematic(enumeration)
 export { enumeration as enum }
+/**
+ * Creates a validator that allows any value
+ * @returns Validator of an Any type
+ */
+export const any = () => new AnyValueSchematic()
 /**
  * Creates a validator that checks for an array, and then validates each of the elements of the array
  * based on the provided `shape`.
@@ -76,6 +91,13 @@ export const intersection = <TLeft extends AnySchematic, TRight extends AnySchem
     right: TRight
 ) => new IntersectionSchematic(left, right)
 /**
+ * Creates a validator that ensures a value is a specific literal value.
+ * @param value Exact value to check against
+ * @returns Validator of a Literal type
+ */
+export const literal = <T extends string | number | boolean>(value: T) =>
+    new LiteralSchematic(value)
+/**
  * Creates a validator that ensures a value is a number.
  * @param opts Configuration options for number validation
  * @returns Validator of a Number type
@@ -96,8 +118,8 @@ export const object = <T extends SchematicObjectShape>(shape: T, opts?: Schemati
  * @param opts Configuration options for record validation
  * @returns Validator of a Record type
  */
-export function record<TKey extends string | number, TValue>(
-    keySchema: Schematic<TKey>,
+export function record<TKey extends AnySchematic, TValue>(
+    keySchema: TKey,
     valueSchema: Schematic<TValue>,
     opts?: SchematicOptions
 ): RecordSchematic<TKey, TValue>
@@ -110,7 +132,7 @@ export function record<TKey extends string | number, TValue>(
 export function record<TValue>(
     valueSchema: Schematic<TValue>,
     opts?: SchematicOptions
-): RecordSchematic<string, TValue>
+): RecordSchematic<StringSchematic, TValue>
 export function record() {
     let [keySchema, valueSchema, options] = Array.from(arguments)
     if (keySchema instanceof Schematic && valueSchema instanceof Schematic) {

@@ -1,5 +1,6 @@
 import { Schematic } from "./schematic"
 import {
+    AnySchematic,
     KeySchemaSymbol,
     SchematicContext,
     SchematicError,
@@ -8,17 +9,13 @@ import {
     ValueSchemaSymbol
 } from "./types"
 
-export class RecordSchematic<TKey extends string | number = string, TValue = any> extends Schematic<
-    Record<TKey, TValue>
+export class RecordSchematic<TKeySchema extends AnySchematic, TValue = any> extends Schematic<
+    Record<string | number, TValue>
 > {
-    protected [KeySchemaSymbol]: Schematic<TKey>
+    protected [KeySchemaSymbol]: TKeySchema
     protected [ValueSchemaSymbol]: Schematic<TValue>
 
-    constructor(
-        keySchema: Schematic<TKey>,
-        valueSchema: Schematic<TValue>,
-        options?: SchematicOptions
-    ) {
+    constructor(keySchema: TKeySchema, valueSchema: Schematic<TValue>, options?: SchematicOptions) {
         super(options)
 
         this[KeySchemaSymbol] = keySchema
@@ -31,7 +28,7 @@ export class RecordSchematic<TKey extends string | number = string, TValue = any
     async _parse(
         value: unknown,
         context: SchematicContext
-    ): Promise<SchematicParseResult<Record<TKey, TValue>>> {
+    ): Promise<SchematicParseResult<Record<string | number, TValue>>> {
         if (typeof value !== "object" || value === null) {
             return this.createTypeParseError(context.path, "object", value)
         }
@@ -39,7 +36,7 @@ export class RecordSchematic<TKey extends string | number = string, TValue = any
         const errors: SchematicError[] = []
         let valid = true
 
-        const result: Record<TKey, TValue> = {} as Record<TKey, TValue>
+        const result: Record<string | number, TValue> = {} as Record<string | number, TValue>
         const keys = Object.keys(value)
 
         for (const key of keys) {
@@ -70,7 +67,7 @@ export class RecordSchematic<TKey extends string | number = string, TValue = any
                 continue
             }
 
-            result[keyResult.value] = valueResult.value
+            result[keyResult.value as any] = valueResult.value
         }
 
         if (!valid) {
@@ -82,7 +79,7 @@ export class RecordSchematic<TKey extends string | number = string, TValue = any
 
         return {
             isValid: true,
-            value: value as Record<TKey, TValue>
+            value: value as Record<string | number, TValue>
         }
     }
 }

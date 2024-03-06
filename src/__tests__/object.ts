@@ -215,3 +215,16 @@ test("rejects type if not all properties have defaults and object is undefined",
         expect(error.message).toBe('"bar" is required')
     }
 })
+
+test("can create enum from object keys", async () => {
+    const base = schematic.object({
+        foo: schematic.string(),
+        bar: schematic.number()
+    })
+
+    const enumSchema = base.keyof()
+
+    const result = await enumSchema.parse("foo")
+
+    expect(result).toEqual("foo")
+})

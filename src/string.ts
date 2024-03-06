@@ -12,7 +12,8 @@ import {
     Defaultable,
     SchematicContext,
     SchematicOptions,
-    SchematicParseResult
+    SchematicParseResult,
+    SchematicTestContext
 } from "./types"
 import { addCheck, withCoerce, withDefault } from "./util"
 
@@ -79,7 +80,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public endsWith(suffix: string, options?: SchematicOptions) {
-        return addCheck(this, async (value: string, context: SchematicContext) => {
+        return addCheck(this, async (value: string, context: SchematicTestContext) => {
             if (!value.endsWith(suffix)) {
                 context.addError(
                     createInvalidStringError(
@@ -94,7 +95,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public includes(substring: string, options?: SchematicOptions) {
-        return addCheck(this, async (value: string, context: SchematicContext) => {
+        return addCheck(this, async (value: string, context: SchematicTestContext) => {
             if (!value.includes(substring)) {
                 context.addError(
                     createInvalidStringError(
@@ -109,7 +110,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public length(length: number, options?: SchematicOptions) {
-        return addCheck(this, async (value: string, context: SchematicContext) => {
+        return addCheck(this, async (value: string, context: SchematicTestContext) => {
             if (value.length !== length) {
                 context.addError(
                     createInvalidExactValueError(
@@ -125,7 +126,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public min(min: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addCheck(this, async (value: string, context: SchematicContext) => {
+        return addCheck(this, async (value: string, context: SchematicTestContext) => {
             const isValid = options?.exclusive ? value.length > min : value.length >= min
             if (!isValid) {
                 const defaultMessage = options?.exclusive
@@ -145,7 +146,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public max(max: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addCheck(this, async (value: string, context: SchematicContext) => {
+        return addCheck(this, async (value: string, context: SchematicTestContext) => {
             const isValid = options?.exclusive ? value.length < max : value.length <= max
             if (!isValid) {
                 const defaultMessage = options?.exclusive
@@ -165,7 +166,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public regex(regex: RegExp, options?: SchematicOptions) {
-        return addCheck(this, async (value: string, context: SchematicContext) => {
+        return addCheck(this, async (value: string, context: SchematicTestContext) => {
             if (!regex.test(value)) {
                 context.addError(
                     createInvalidStringError(
@@ -180,7 +181,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     }
 
     public startsWith(prefix: string, options?: SchematicOptions) {
-        return addCheck(this, async (value: string, context: SchematicContext) => {
+        return addCheck(this, async (value: string, context: SchematicTestContext) => {
             if (!value.startsWith(prefix)) {
                 context.addError(
                     createInvalidStringError(
@@ -192,5 +193,9 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
                 )
             }
         })
+    }
+
+    public toUpperCase() {
+        return this.transform((value) => value.toUpperCase())
     }
 }

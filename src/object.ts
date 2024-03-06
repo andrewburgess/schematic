@@ -1,4 +1,5 @@
-import { OptionalSchematic, Schematic } from "./schematic"
+import { EnumSchematic } from "./enum"
+import { NullableSchematic, OptionalSchematic, Schematic } from "./schematic"
 import {
     InferObject,
     SchematicContext,
@@ -12,7 +13,8 @@ import {
     SchematicPartial,
     SchematicPick,
     SchematicRequired,
-    ShapeSymbol
+    ShapeSymbol,
+    UnionToTupleString
 } from "./types"
 import { assertNever, clone } from "./util"
 
@@ -152,6 +154,24 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         >
     }
 
+    public keyof(): EnumSchematic<UnionToTupleString<keyof T>> {
+        const keys = Object.keys(this[ShapeSymbol])
+        return new EnumSchematic(keys) as unknown as EnumSchematic<UnionToTupleString<keyof T>>
+    }
+
+    public merge<TMerge extends ObjectSchematic<any>, TShape extends TMerge[typeof ShapeSymbol]>(
+        shape: TMerge
+    ): ObjectSchematic<SchematicExtend<T, TShape>> {
+        const newShape: any = {
+            ...this[ShapeSymbol],
+            ...shape
+        }
+
+        return new ObjectSchematic(newShape, this.options) as unknown as ObjectSchematic<
+            SchematicExtend<T, TShape>
+        >
+    }
+
     public omit<K extends keyof InferObject<T>>(
         ...keys: K[]
     ): ObjectSchematic<SchematicOmit<T, K>> {
@@ -204,7 +224,11 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         }
 
         for (const key in this[ShapeSymbol]) {
-            if (keys.includes(key as any) && this[ShapeSymbol][key] instanceof OptionalSchematic) {
+            if (
+                keys.includes(key as any) &&
+                (this[ShapeSymbol][key] instanceof NullableSchematic ||
+                    this[ShapeSymbol][key] instanceof OptionalSchematic)
+            ) {
                 const optional = this[ShapeSymbol][key] as unknown as OptionalSchematic<any>
                 shape[key] = optional[ShapeSymbol]
             } else {

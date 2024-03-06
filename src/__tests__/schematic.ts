@@ -44,6 +44,30 @@ test("should parse optional value correctly if it is provided", async () => {
     expect(result).toBe(true)
 })
 
+test("should allow specifying a nullable type", async () => {
+    const schema = schematic.boolean().nullable()
+
+    const result = await schema.parse(null)
+
+    expect(result).toBeNull()
+
+    const result2 = await schema.parse(true)
+
+    expect(result2).toBe(true)
+})
+
+test("should allow specifying nullable multiple times", async () => {
+    const schema = schematic.boolean().nullable().nullable().nullable()
+
+    const result = await schema.parse(null)
+
+    expect(result).toBeNull()
+
+    const result2 = await schema.parse(true)
+
+    expect(result2).toBe(true)
+})
+
 test("should allow converting an optional schema to required", async () => {
     const schema = schematic.boolean().optional().required()
     try {

@@ -10,10 +10,12 @@ const ObjectEnum = {
     foo: "foo",
     bar: "bar"
 } as const
+const StringEnum = ["foo", "bar"] as const
 
 const arrayEnum = schematic.enum(ArrayEnum)
 const nativeEnum = schematic.enum(TestEnum)
 const objectEnum = schematic.enum(ObjectEnum)
+const stringEnum = schematic.enum(StringEnum)
 
 test("should parse a native enum", async () => {
     const result = await nativeEnum.parse("foo")
@@ -29,6 +31,12 @@ test("should parse an array enum", async () => {
 
 test("should parse an object enum", async () => {
     const result = await objectEnum.parse("foo")
+
+    expect(result).toBe("foo")
+})
+
+test("should parse a string enum", async () => {
+    const result = await stringEnum.parse("foo")
 
     expect(result).toBe("foo")
 })
