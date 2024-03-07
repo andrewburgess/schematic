@@ -77,13 +77,7 @@ export type SchematicObjectShape = {
 // #endregion
 
 // #region Schematic Symbols
-export const CoerceSymbol = Symbol("coerce")
-export const DefaultValueSymbol = Symbol("defaultValue")
-export const KeySchemaSymbol = Symbol("keySchema")
 export const OutputSymbol = Symbol("output")
-export const ShapeSymbol = Symbol("shape")
-export const TypeErrorSymbol = Symbol("typeErrorMessage")
-export const ValueSchemaSymbol = Symbol("valueSchema")
 // #endregion
 
 // #region Schematic Enhancements
@@ -107,6 +101,7 @@ export interface SchematicOptions {
  * expected type
  */
 export interface Coercable {
+    _coerce: boolean
     coerce(): AnySchematic
 }
 
@@ -114,7 +109,7 @@ export interface Coercable {
  * A Schematic that can have a default value
  */
 export interface Defaultable<TValue> {
-    [DefaultValueSymbol]: TValue | (() => TValue) | undefined
+    _defaultValue: TValue | (() => TValue) | undefined
     /**
      * Assign the value to be used as a default when the value is not
      * provided

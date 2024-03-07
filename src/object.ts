@@ -15,7 +15,6 @@ import {
     SchematicObjectShape,
     SchematicOptions,
     SchematicParseReturnType,
-    ShapeSymbol,
     UnionToTupleString,
     VALID
 } from "./types"
@@ -51,14 +50,12 @@ export interface SchematicObjectOptions extends SchematicOptions {
 }
 
 export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<InferObject<T>> {
-    /**
-     * @internal
-     */
-    public readonly [ShapeSymbol]: T
+    /** @internal */
+    private readonly _shape: T
     private readonly unknownKeys: UnknownKeys = UnknownKeys.Strip
 
     public get shape(): T {
-        return this[ShapeSymbol]
+        return this._shape
     }
 
     constructor(
@@ -66,7 +63,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         private readonly options: SchematicObjectOptions = {}
     ) {
         super(options)
-        this[ShapeSymbol] = shape
+        this._shape = shape
 
         if (this.options.unknownKeys) {
             this.unknownKeys = this.options.unknownKeys
@@ -89,13 +86,13 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             return INVALID
         }
 
-        const definedKeys: string[] = Object.keys(this[ShapeSymbol])
+        const definedKeys: string[] = Object.keys(this.shape)
         const unknownKeys = Object.keys(value ?? {}).filter((key) => !definedKeys.includes(key))
         const result: any = {}
         let status: SchematicParseReturnType["status"] = "valid"
 
         for (const key of definedKeys) {
-            const schematic = this[ShapeSymbol][key]
+            const schematic = this.shape[key]
             const val = (value as any)?.[key]
 
             const parsed = await schematic.runValidation(
@@ -155,8 +152,8 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
     ): ObjectSchematic<Extend<T, TExtend>> {
         const newShape: any = {}
 
-        for (const key in this[ShapeSymbol]) {
-            newShape[key] = clone(this[ShapeSymbol][key])
+        for (const key in this.shape) {
+            newShape[key] = clone(this.shape[key])
         }
 
         for (const key in shape) {
@@ -169,7 +166,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
     }
 
     public keyof(): EnumSchematic<UnionToTupleString<keyof T>> {
-        const keys = Object.keys(this[ShapeSymbol])
+        const keys = Object.keys(this.shape)
         return new EnumSchematic(keys) as unknown as EnumSchematic<UnionToTupleString<keyof T>>
     }
 
@@ -177,8 +174,8 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         shape: TMerge
     ): ObjectSchematic<Extend<T, TShape>> {
         const newShape: any = {
-            ...this[ShapeSymbol],
-            ...shape[ShapeSymbol]
+            ...this.shape,
+            ...shape.shape
         }
 
         return new ObjectSchematic(newShape, this.options) as unknown as ObjectSchematic<
@@ -190,9 +187,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         ...keys: K[]
     ): ObjectSchematic<Flatten<Omit<T, K>>> {
         const shape: any = {}
-        for (const key in this[ShapeSymbol]) {
+        for (const key in this.shape) {
             if (!keys.includes(key as any)) {
-                shape[key] = this[ShapeSymbol][key]
+                shape[key] = this.shape[key]
             }
         }
         return new ObjectSchematic(shape, this.options)
@@ -204,14 +201,14 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         const shape: any = {}
 
         if (keys.length === 0) {
-            keys = Object.keys(this[ShapeSymbol]) as K[]
+            keys = Object.keys(this.shape) as K[]
         }
 
-        for (const key in this[ShapeSymbol]) {
+        for (const key in this.shape) {
             if (keys.includes(key as any)) {
-                shape[key] = this[ShapeSymbol][key].optional()
+                shape[key] = this.shape[key].optional()
             } else {
-                shape[key] = this[ShapeSymbol][key]
+                shape[key] = this.shape[key]
             }
         }
 
@@ -223,7 +220,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
     ): ObjectSchematic<Flatten<Pick<T, K>>> {
         const shape: any = {}
         for (const key of keys) {
-            shape[key] = this[ShapeSymbol][key as any]
+            shape[key] = this.shape[key as any]
         }
         return new ObjectSchematic(shape, this.options)
     }
@@ -234,15 +231,15 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         const shape: any = {}
 
         if (keys.length === 0) {
-            keys = Object.keys(this[ShapeSymbol]) as K[]
+            keys = Object.keys(this.shape) as K[]
         }
 
-        for (const key in this[ShapeSymbol]) {
-            if (keys.includes(key as any) && this[ShapeSymbol][key] instanceof OptionalSchematic) {
-                const optional = this[ShapeSymbol][key] as unknown as OptionalSchematic<any>
-                shape[key] = optional[ShapeSymbol]
+        for (const key in this.shape) {
+            if (keys.includes(key as any) && this.shape[key] instanceof OptionalSchematic) {
+                const optional = this.shape[key] as unknown as OptionalSchematic<any>
+                shape[key] = optional.shape
             } else {
-                shape[key] = this[ShapeSymbol][key]
+                shape[key] = this.shape[key]
             }
         }
 

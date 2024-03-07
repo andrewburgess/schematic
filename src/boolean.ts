@@ -2,8 +2,6 @@ import { createInvalidTypeError } from "./error"
 import { Schematic } from "./schematic"
 import {
     Coercable,
-    CoerceSymbol,
-    DefaultValueSymbol,
     Defaultable,
     INVALID,
     SchematicInput,
@@ -16,25 +14,21 @@ export class BooleanSchematic
     extends Schematic<boolean>
     implements Coercable, Defaultable<boolean>
 {
-    /**
-     * @internal
-     */
-    [DefaultValueSymbol]: boolean | (() => boolean) | undefined
+    /** @internal */
+    _coerce: boolean = false
+    /** @internal */
+    _defaultValue: boolean | (() => boolean) | undefined
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<boolean>> {
         const context = this._getInputContext(input)
         let value = context.data
-        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+        if (typeof value === "undefined" && this._defaultValue !== undefined) {
             value =
-                typeof this[DefaultValueSymbol] === "function"
-                    ? this[DefaultValueSymbol]()
-                    : this[DefaultValueSymbol]
+                typeof this._defaultValue === "function" ? this._defaultValue() : this._defaultValue
         }
 
-        if (this[CoerceSymbol]) {
+        if (this._coerce) {
             switch (typeof value) {
                 case "string": {
                     let lowered = value.toLowerCase()
@@ -63,7 +57,7 @@ export class BooleanSchematic
         return VALID(value)
     }
 
-    public coerce() {
+    public coerce(): this {
         return withCoerce(this)
     }
 

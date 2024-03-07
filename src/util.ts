@@ -1,7 +1,6 @@
 import { Schematic } from "./schematic"
 import {
-    CoerceSymbol,
-    DefaultValueSymbol,
+    Coercable,
     SchematicContext,
     SchematicError,
     SchematicErrorData,
@@ -126,10 +125,12 @@ export function mergeValues(
     return { isValid: false }
 }
 
-export function withCoerce<TSchematic extends Schematic<any>>(schematic: TSchematic) {
+export function withCoerce<TValue, TSchematic extends Schematic<TValue> & Coercable>(
+    schematic: TSchematic
+) {
     const cloned = clone(schematic)
 
-    cloned[CoerceSymbol] = true
+    cloned._coerce = true
 
     return cloned
 }
@@ -140,7 +141,7 @@ export function withDefault<TValue, TSchematic extends Schematic<TValue> & Defau
 ) {
     const cloned = clone(schematic)
 
-    cloned[DefaultValueSymbol] = defaultValue
+    cloned._defaultValue = defaultValue
 
     return cloned
 }

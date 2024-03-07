@@ -6,7 +6,6 @@ import {
     SchematicParseError
 } from "./error"
 import {
-    CoerceSymbol,
     DIRTY,
     INVALID,
     isDirty,
@@ -17,10 +16,8 @@ import {
     SchematicInput,
     SchematicParseReturnType,
     SchematicTestContext,
-    ShapeSymbol,
     TestCheck,
     TransformFn,
-    TypeErrorSymbol,
     VALID,
     ValidationCheck,
     type AnySchematic,
@@ -35,8 +32,8 @@ import {
  */
 export abstract class Schematic<T> {
     public readonly [OutputSymbol]!: T
-    protected [CoerceSymbol]?: boolean
-    protected [TypeErrorSymbol]?: string
+    /** @internal */
+    protected typeErrorMessage?: string
 
     /**
      * @internal
@@ -44,8 +41,7 @@ export abstract class Schematic<T> {
     checks: Array<ValidationCheck<any>> = []
 
     constructor(options?: SchematicOptions) {
-        this[CoerceSymbol] = options?.coerce
-        this[TypeErrorSymbol] = options?.message
+        this.typeErrorMessage = options?.message
     }
 
     /**
@@ -137,7 +133,7 @@ export abstract class Schematic<T> {
 
     public nullable(): NullableSchematic<this> {
         if (this instanceof NullableSchematic) {
-            const shape = this[ShapeSymbol]
+            const shape = this.shape
             return new NullableSchematic(clone(shape))
         }
 
@@ -146,7 +142,7 @@ export abstract class Schematic<T> {
 
     public optional(): OptionalSchematic<this> {
         if (this instanceof OptionalSchematic) {
-            const shape = this[ShapeSymbol]
+            const shape = this.shape
             return new OptionalSchematic(clone(shape))
         }
 
@@ -250,18 +246,15 @@ export class AnyValueSchematic extends Schematic<any> {
 }
 
 export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]> {
-    /**
-     * @internal
-     */
-    public [ShapeSymbol]: T
+    private _shape: T
 
     constructor(shape: T) {
         super()
-        this[ShapeSymbol] = shape
+        this._shape = shape
     }
 
     public get shape(): T {
-        return this[ShapeSymbol]
+        return this._shape
     }
 
     /**
@@ -283,7 +276,7 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
         const results = await Promise.all(
             ([...context.data] as any[]).map((item, i) => {
                 const childContext = new SchematicInputChild(context, item, context.path, i)
-                return this[ShapeSymbol].runValidation(childContext)
+                return this.shape.runValidation(childContext)
             })
         )
 
@@ -449,16 +442,16 @@ export class LiteralSchematic<T extends string | number | boolean> extends Schem
 
 export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T> | null> {
     protected readonly _nullable = true as const
-    public readonly [ShapeSymbol]: T
+    private readonly _shape: T
 
     constructor(schematic: T) {
         super()
 
-        this[ShapeSymbol] = schematic
+        this._shape = schematic
     }
 
     public get shape(): T {
-        return this[ShapeSymbol]
+        return this._shape
     }
 
     /**
@@ -469,12 +462,12 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
             return VALID(null)
         }
 
-        const shape = this[ShapeSymbol]
+        const shape = this.shape
         return shape._parse(input)
     }
 
     public required<T extends AnySchematic = this["shape"]>(): T {
-        const shape = this[ShapeSymbol]
+        const shape = this.shape
 
         if (shape instanceof NullableSchematic || shape instanceof OptionalSchematic) {
             return shape.required()
@@ -489,19 +482,16 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
 
 export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T> | undefined> {
     protected readonly _optional = true as const
-    /**
-     * @internal
-     */
-    public readonly [ShapeSymbol]: T
+    private readonly _shape: T
 
     constructor(schematic: T) {
         super()
 
-        this[ShapeSymbol] = schematic
+        this._shape = schematic
     }
 
     public get shape(): T {
-        return this[ShapeSymbol]
+        return this._shape
     }
 
     /**
@@ -513,12 +503,12 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
             return VALID(undefined)
         }
 
-        const shape = this[ShapeSymbol]
+        const shape = this.shape
         return shape._parse(input)
     }
 
     public required<T extends AnySchematic = this["shape"]>(): T {
-        const shape = this[ShapeSymbol]
+        const shape = this.shape
 
         if (shape instanceof NullableSchematic || shape instanceof OptionalSchematic) {
             return shape.required()

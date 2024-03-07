@@ -8,8 +8,6 @@ import {
 import { Schematic } from "./schematic"
 import {
     Coercable,
-    CoerceSymbol,
-    DefaultValueSymbol,
     Defaultable,
     INVALID,
     SchematicInput,
@@ -24,26 +22,22 @@ const EMAIL_REGEX =
     /^(?!\.)(?!.*\.\.)([A-Z0-9_+-\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\-]*\.)+[A-Z]{2,}$/i
 
 export class StringSchematic extends Schematic<string> implements Coercable, Defaultable<string> {
-    /**
-     * @internal
-     */
-    [DefaultValueSymbol]: string | (() => string) | undefined
+    /** @internal */
+    _coerce: boolean = false
+    /** @internal */
+    _defaultValue: string | (() => string) | undefined
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<string>> {
         const context = this._getInputContext(input)
         let value = context.data
 
-        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+        if (typeof value === "undefined" && this._defaultValue !== undefined) {
             value =
-                typeof this[DefaultValueSymbol] === "function"
-                    ? this[DefaultValueSymbol]()
-                    : this[DefaultValueSymbol]
+                typeof this._defaultValue === "function" ? this._defaultValue() : this._defaultValue
         }
 
-        if (typeof value !== "string" && this[CoerceSymbol]) {
+        if (typeof value !== "string" && this._coerce) {
             switch (typeof value) {
                 case "function":
                 case "symbol":
@@ -70,7 +64,7 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
         return VALID(value)
     }
 
-    public coerce() {
+    public coerce(): this {
         return withCoerce(this)
     }
 

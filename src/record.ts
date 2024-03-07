@@ -7,25 +7,33 @@ import {
     INVALID,
     isDirty,
     isInvalid,
-    KeySchemaSymbol,
     SchematicInput,
     SchematicOptions,
     SchematicParseReturnType,
-    VALID,
-    ValueSchemaSymbol
+    VALID
 } from "./types"
 
 export class RecordSchematic<TKeySchema extends AnySchematic, TValue = any> extends Schematic<
     Record<string | number, TValue>
 > {
-    protected [KeySchemaSymbol]: TKeySchema
-    protected [ValueSchemaSymbol]: Schematic<TValue>
+    /** @internal */
+    private readonly _keySchema: TKeySchema
+    /** @internal */
+    private readonly _valueSchema: Schematic<TValue>
 
     constructor(keySchema: TKeySchema, valueSchema: Schematic<TValue>, options?: SchematicOptions) {
         super(options)
 
-        this[KeySchemaSymbol] = keySchema
-        this[ValueSchemaSymbol] = valueSchema
+        this._keySchema = keySchema
+        this._valueSchema = valueSchema
+    }
+
+    public get keySchema(): TKeySchema {
+        return this._keySchema
+    }
+
+    public get valueSchema(): Schematic<TValue> {
+        return this._valueSchema
     }
 
     /**
@@ -47,7 +55,7 @@ export class RecordSchematic<TKeySchema extends AnySchematic, TValue = any> exte
         let status: SchematicParseReturnType["status"] = "valid"
 
         for (const key of keys) {
-            const keyResult = await this[KeySchemaSymbol].runValidation(
+            const keyResult = await this._keySchema.runValidation(
                 new SchematicInputChild(context, key, context.path, key)
             )
             if (isInvalid(keyResult)) {
@@ -58,7 +66,7 @@ export class RecordSchematic<TKeySchema extends AnySchematic, TValue = any> exte
                 status = "dirty"
             }
 
-            const valueResult = await this[ValueSchemaSymbol].runValidation(
+            const valueResult = await this._valueSchema.runValidation(
                 new SchematicInputChild(context, value[key], context.path, key)
             )
 

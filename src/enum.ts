@@ -2,7 +2,6 @@ import { createInvalidTypeError, createUnrecognizedValueError } from "./error"
 import { Schematic } from "./schematic"
 import {
     Defaultable,
-    DefaultValueSymbol,
     EnumType,
     INVALID,
     SchematicInput,
@@ -23,34 +22,32 @@ export class EnumSchematic<T extends EnumType>
     extends Schematic<EnumKeys<T>>
     implements Defaultable<EnumKeys<T>>
 {
-    /**
-     * @internal
-     */
-    [DefaultValueSymbol]: EnumKeys<T> | (() => EnumKeys<T>) | undefined
+    /** @internal */
+    _defaultValue: EnumKeys<T> | (() => EnumKeys<T>) | undefined
+    /** @internal */
+    private readonly _enumeration: T
 
-    constructor(private readonly enumeration: T) {
+    constructor(enumeration: T) {
         super()
+
+        this._enumeration = enumeration
     }
 
     public get shape(): T {
-        return this.enumeration
+        return this._enumeration
     }
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<EnumKeys<T>>> {
         const context = this._getInputContext(input)
         let value = context.data
-        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+        if (typeof value === "undefined" && this._defaultValue !== undefined) {
             value =
-                typeof this[DefaultValueSymbol] === "function"
-                    ? this[DefaultValueSymbol]()
-                    : this[DefaultValueSymbol]
+                typeof this._defaultValue === "function" ? this._defaultValue() : this._defaultValue
         }
 
         if (typeof value === "string" || typeof value === "number") {
-            if (Object.values(this.enumeration).includes(value)) {
+            if (Object.values(this.shape).includes(value)) {
                 return VALID(value as EnumKeys<T>)
             }
         }
@@ -60,7 +57,7 @@ export class EnumSchematic<T extends EnumType>
             return INVALID
         }
 
-        addErrorToContext(context, createUnrecognizedValueError(value, this.enumeration))
+        addErrorToContext(context, createUnrecognizedValueError(value, this.shape))
         return INVALID
     }
 

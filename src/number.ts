@@ -2,8 +2,6 @@ import { createInvalidTypeError, createTooBigError, createTooSmallError } from "
 import { Schematic } from "./schematic"
 import {
     Coercable,
-    CoerceSymbol,
-    DefaultValueSymbol,
     Defaultable,
     INVALID,
     SchematicInput,
@@ -15,26 +13,22 @@ import {
 import { addCheck, addErrorToContext, withCoerce, withDefault } from "./util"
 
 export class NumberSchematic extends Schematic<number> implements Coercable, Defaultable<number> {
-    /**
-     * @internal
-     */
-    [DefaultValueSymbol]: number | (() => number) | undefined
+    /** @internal */
+    _coerce: boolean = false
+    /** @internal */
+    _defaultValue: number | (() => number) | undefined
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<number>> {
         const context = this._getInputContext(input)
         let value = context.data
 
-        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+        if (typeof value === "undefined" && this._defaultValue !== undefined) {
             value =
-                typeof this[DefaultValueSymbol] === "function"
-                    ? this[DefaultValueSymbol]()
-                    : this[DefaultValueSymbol]
+                typeof this._defaultValue === "function" ? this._defaultValue() : this._defaultValue
         }
 
-        if (this[CoerceSymbol]) {
+        if (this._coerce) {
             if (typeof value !== "number") {
                 const coerced = Number(value)
                 if (!isNaN(coerced)) {
@@ -51,7 +45,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
         return VALID(value)
     }
 
-    public coerce() {
+    public coerce(): this {
         return withCoerce(this)
     }
 

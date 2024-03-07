@@ -2,8 +2,6 @@ import { createInvalidTypeError, createTooBigError, createTooSmallError } from "
 import { Schematic } from "./schematic"
 import {
     Coercable,
-    CoerceSymbol,
-    DefaultValueSymbol,
     Defaultable,
     INVALID,
     SchematicInput,
@@ -15,29 +13,25 @@ import {
 import { addCheck, addErrorToContext, withCoerce, withDefault } from "./util"
 
 export class DateSchematic extends Schematic<Date> implements Coercable, Defaultable<Date> {
-    /**
-     * @internal
-     */
-    [DefaultValueSymbol]: Date | (() => Date) | undefined
+    /** @internal */
+    _coerce: boolean = false
+    /** @internal */
+    _defaultValue: Date | (() => Date) | undefined
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Date>> {
         const context = this._getInputContext(input)
         let value = context.data
-        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+        if (typeof value === "undefined" && this._defaultValue !== undefined) {
             value =
-                typeof this[DefaultValueSymbol] === "function"
-                    ? this[DefaultValueSymbol]()
-                    : this[DefaultValueSymbol]
+                typeof this._defaultValue === "function" ? this._defaultValue() : this._defaultValue
         }
         if (value === null || value === undefined) {
             addErrorToContext(context, createInvalidTypeError(context.path, "Date", value))
             return INVALID
         }
 
-        if (this[CoerceSymbol]) {
+        if (this._coerce) {
             if (
                 (!(value instanceof Date) && typeof value === "string") ||
                 typeof value === "number"
@@ -54,7 +48,7 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
         return VALID(value)
     }
 
-    public coerce() {
+    public coerce(): this {
         return withCoerce(this)
     }
 
