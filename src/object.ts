@@ -8,7 +8,6 @@ import {
     INVALID,
     isDirty,
     isInvalid,
-    isValid,
     SchematicErrorType,
     SchematicExtend,
     SchematicInput,
@@ -87,9 +86,11 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
                 new SchematicInputChild(context, val, context.path, key)
             )
 
-            if (isValid(parsed) && parsed.value !== undefined) {
+            if (!isInvalid(parsed) && parsed.value !== undefined) {
                 result[key] = parsed.value
-            } else if (isDirty(parsed)) {
+            }
+
+            if (isDirty(parsed)) {
                 status = "dirty"
             } else if (isInvalid(parsed)) {
                 status = "invalid"

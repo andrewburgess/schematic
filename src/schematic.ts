@@ -112,7 +112,7 @@ export abstract class Schematic<T> {
             await check(result.value, checkContext)
         }
 
-        if (dirty) {
+        if (isDirty(result) || dirty) {
             return DIRTY(result.value)
         }
 
@@ -137,23 +137,21 @@ export abstract class Schematic<T> {
     }
 
     public nullable(): NullableSchematic<this> {
-        const cloned = clone(this)
-
-        if (cloned instanceof NullableSchematic) {
-            return cloned
+        if (this instanceof NullableSchematic) {
+            const shape = this[ShapeSymbol]
+            return new NullableSchematic(clone(shape))
         }
 
-        return new NullableSchematic(cloned)
+        return new NullableSchematic(clone(this))
     }
 
     public optional(): OptionalSchematic<this> {
-        const cloned = clone(this)
-
-        if (cloned instanceof OptionalSchematic) {
-            return cloned
+        if (this instanceof OptionalSchematic) {
+            const shape = this[ShapeSymbol]
+            return new OptionalSchematic(clone(shape))
         }
 
-        return new OptionalSchematic(cloned)
+        return new OptionalSchematic(clone(this))
     }
 
     public or<T extends AnySchematic>(schema: T): UnionSchematic<[this, T]> {
@@ -558,6 +556,10 @@ export class PipedSchematic<
             return INVALID
         }
 
+        if (isDirty(parsed)) {
+            return DIRTY(parsed.value)
+        }
+
         return this.outputSchema.runValidation({
             value: parsed.value,
             path: input.path,
@@ -599,7 +601,7 @@ export class TransformSchematic<TInput extends AnySchematic, TOutput> extends Sc
         }
         const transformed = await this.transformFn(result.value, transformContext)
 
-        if (dirty) {
+        if (isDirty(result) || dirty) {
             return DIRTY(transformed)
         }
 
