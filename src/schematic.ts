@@ -1,4 +1,4 @@
-import { addCheck, addErrorToContext, clone, mergeValues } from "./util"
+import { addCheck, addErrorToContext, clone, mergeValues, SchematicInputChild } from "./util"
 import {
     createInvalidExactValueError,
     createTooBigError,
@@ -15,7 +15,6 @@ import {
     OutputSymbol,
     SchematicErrorType,
     SchematicInput,
-    SchematicInputChild,
     SchematicParseReturnType,
     SchematicTestContext,
     ShapeSymbol,

@@ -1,4 +1,4 @@
-import { addErrorToContext } from "./util"
+import { addErrorToContext, SchematicInputChild } from "./util"
 import { createInvalidTypeError } from "./error"
 import { Schematic } from "./schematic"
 import {
@@ -9,7 +9,6 @@ import {
     isInvalid,
     KeySchemaSymbol,
     SchematicInput,
-    SchematicInputChild,
     SchematicOptions,
     SchematicParseReturnType,
     VALID,

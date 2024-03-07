@@ -1,7 +1,79 @@
-import { AnyValueSchematic, NullableSchematic, OptionalSchematic, Schematic } from "./schematic"
+import { AnyValueSchematic, OptionalSchematic, Schematic } from "./schematic"
 
 // #region Utility Types
-export type OmitKeys<T, K extends string> = Pick<T, Exclude<keyof T, K>>
+/**
+ * A Schematic of any type
+ */
+export type AnySchematic = Schematic<any>
+/**
+ * Asserts that the input type is assignable to the expected type
+ */
+export type AssertEqual<Type, Expected> = Type extends Expected ? true : false
+/**
+ * A type that can be used as an enum
+ */
+export type EnumType =
+    | { readonly [key: string]: string | number }
+    | { readonly [key: number]: string | number }
+/**
+ * Flattens the type definition to a root object
+ */
+export type Flatten<Type> = Identity<{ [key in keyof Type]: Type[key] }>
+/**
+ * Identity type
+ */
+export type Identity<Type> = Type
+/**
+ * Infers the output type of a Schematic
+ */
+export type Infer<TSchematic> = TSchematic extends AnySchematic
+    ? TSchematic[typeof OutputSymbol]
+    : never
+/**
+ * Infers the object shape output of a Schematic
+ */
+export type InferObject<TObject extends SchematicObjectShape> = Flatten<
+    {
+        [key in RequiredKeys<TObject>]: TObject[key][typeof OutputSymbol]
+    } & {
+        [key in OptionalKeys<TObject>]?: TObject[key][typeof OutputSymbol]
+    }
+>
+/**
+ * Returns the keys of a Schematic that are an OptionalSchematic or
+ * an AnyValueSchematic (which means they can be anything)
+ */
+type OptionalKeys<Type extends SchematicObjectShape> = {
+    [key in keyof Type]: Type[key] extends OptionalSchematic<any>
+        ? key
+        : Type[key] extends AnyValueSchematic
+          ? key
+          : never
+}[keyof Type]
+/**
+ * Returns the keys of a Schematic that are required (any that are not marked
+ * as optional)
+ */
+type RequiredKeys<Type extends SchematicObjectShape> = Exclude<
+    string & keyof Type,
+    OptionalKeys<Type>
+>
+/**
+ * Removes the OptionalSchematic from the type, and returns the underlying
+ * Schematic type
+ */
+export type RemoveOptional<Type> =
+    Type extends OptionalSchematic<infer InnerType> ? RemoveOptional<InnerType> : Type
+/**
+ * Removes the "path" property from the type
+ */
+type RemovePath<Type extends object> = Type extends any ? Omit<Type, "path"> : never
+/**
+ * Represents an object of Schematic types
+ */
+export type SchematicObjectShape = {
+    [key: string]: AnySchematic
+}
 // #endregion
 
 // #region Schematic Symbols
@@ -15,6 +87,9 @@ export const ValueSchemaSymbol = Symbol("valueSchema")
 // #endregion
 
 // #region Schematic Enhancements
+/**
+ * Options to use when building a Schematic
+ */
 export interface SchematicOptions {
     /**
      * If true, attempts to coerce the value into the type will be made,
@@ -27,18 +102,32 @@ export interface SchematicOptions {
     message?: string
 }
 
+/**
+ * A Schematic that will attempt to coerce the input value into the
+ * expected type
+ */
 export interface Coercable {
     coerce(): AnySchematic
 }
 
+/**
+ * A Schematic that can have a default value
+ */
 export interface Defaultable<TValue> {
     [DefaultValueSymbol]: TValue | (() => TValue) | undefined
+    /**
+     * Assign the value to be used as a default when the value is not
+     * provided
+     */
     default(value: TValue | (() => TValue)): Schematic<TValue>
 }
-
 // #endregion
 
 // #region Schematic Validation
+/**
+ * Base data to be passed into Schematic parsing functions to
+ * track errors
+ */
 export interface SchematicContext {
     readonly data: any
     readonly path: (string | number)[]
@@ -48,33 +137,82 @@ export interface SchematicContext {
     }
 }
 
+/**
+ * Context when running `ensure`, `test`, or `transform`
+ * functions on a Schematic
+ */
 export interface SchematicTestContext {
     addError: (error: SchematicErrorData) => void
     path: (string | number)[]
 }
 
+/**
+ * Function that transforms a parsed Schematic value to a new value
+ */
 export type TransformFn<TSchematic, TOutput> = (
     value: Infer<TSchematic>,
     context: SchematicTestContext
 ) => TOutput | Promise<TOutput>
 
+/**
+ * Function that checks a parsed Schematic value for validity
+ */
 export type ValidationCheck<TValue> = (
     value: TValue,
     context: SchematicTestContext
 ) => Promise<void> | void
 
+/**
+ * Quick validation check function that checks a parsed Schematic value
+ * for validity
+ */
 export type TestCheck<TValue> = (value: TValue) => Promise<boolean> | boolean
 
+/**
+ * Type of error that can be returned from a Schematic validation
+ */
 export enum SchematicErrorType {
+    /**
+     * The provided value did not exactly match an expected value
+     */
     InvalidExactValue = "InvalidExactValue",
+    /**
+     * The provided value did not match both sides of a Schematic
+     * intersection
+     */
     InvalidIntersection = "InvalidIntersection",
+    /**
+     * The provided string value did not match the expected format
+     */
     InvalidString = "InvalidString",
+    /**
+     * The provided value did not match the expected type
+     */
     InvalidType = "InvalidType",
+    /**
+     * The provided value did not match any of the expected types
+     */
     InvalidUnion = "InvalidUnion",
+    /**
+     * The provided value was too large
+     */
     TooBig = "TooBig",
+    /**
+     * The provided value was too small
+     */
     TooSmall = "TooSmall",
+    /**
+     * The provided object had keys that were not defined in the
+     * Schematic
+     */
     UnrecognizedKeys = "UnrecognizedKeys",
+    /**
+     * The provided value was not found in the list of expected values
+     */
     UnrecognizedValue = "UnrecognizedValue",
+    /**
+     * The provided value failed a validation check
+     */
     ValidationError = "ValidationError"
 }
 
@@ -155,47 +293,17 @@ export type SchematicError = SchematicErrorWithoutMessage & {
     message: string
 }
 
-type RemovePath<T extends object> = T extends any ? OmitKeys<T, "path"> : never
 export type SchematicErrorData = RemovePath<SchematicErrorWithoutMessage> & {
     path?: (string | number)[]
 }
 
+/**
+ * Input data when running a Schematic validation
+ */
 export type SchematicInput<T = any> = {
     value: T
     path: (string | number)[]
     parent: SchematicContext
-}
-
-export class SchematicInputChild implements SchematicInput {
-    public parent: SchematicContext
-    public value: any
-    private _path: (string | number)[]
-    private _key: string | number | (string | number)[]
-    private _cachedPath: (string | number)[] = []
-
-    constructor(
-        parent: SchematicContext,
-        value: any,
-        path: (string | number)[],
-        key: string | number | (string | number)[]
-    ) {
-        this.parent = parent
-        this.value = value
-        this._path = path
-        this._key = key
-    }
-
-    public get path() {
-        if (!this._cachedPath.length) {
-            if (this._key instanceof Array) {
-                this._cachedPath = [...this._path, ...this._key]
-            } else {
-                this._cachedPath = [...this._path, this._key]
-            }
-        }
-
-        return this._cachedPath
-    }
 }
 
 export interface SchematicParseResult {
@@ -223,70 +331,6 @@ export const isValid = <T>(result: SchematicParseReturnType<T>): result is VALID
     result.status === "valid"
 
 // #endregion
-
-// #region Schematic Type Testing
-export type AssertEqual<Type, Expected> = Type extends Expected ? true : false
-// #endregion
-
-/**
- * A Schematic of any type
- */
-export type AnySchematic = Schematic<any>
-
-export type EnumType =
-    | { readonly [key: string]: string | number }
-    | { readonly [key: number]: string | number }
-
-export type Identity<T> = T
-export type Flatten<T> = Identity<{ [key in keyof T]: T[key] }>
-
-type OptionalKeys<T extends SchematicObjectShape> = {
-    [key in keyof T]: T[key] extends OptionalSchematic<any>
-        ? key
-        : T[key] extends AnyValueSchematic
-          ? key
-          : never
-}[keyof T]
-
-type RequiredKeys<T extends SchematicObjectShape> = Exclude<string & keyof T, OptionalKeys<T>>
-
-export type Infer<T> = T extends AnySchematic ? T[typeof OutputSymbol] : never
-export type InferObject<T extends SchematicObjectShape> = Flatten<
-    {
-        [key in RequiredKeys<T>]: T[key][typeof OutputSymbol]
-    } & {
-        [key in OptionalKeys<T>]?: T[key][typeof OutputSymbol]
-    }
->
-export type SchematicOmit<T, K extends keyof T> = Flatten<Omit<T, K>>
-export type SchematicPick<T, K extends keyof T> = Flatten<Pick<T, K>>
-
-export type SchematicExtend<T, U> = Flatten<Omit<T, keyof U> & U>
-export type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> = Flatten<
-    {
-        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<T[key]>
-            ? T[key]
-            : OptionalSchematic<T[key]>
-    } & {
-        [key in Exclude<keyof T, K>]: T[key]
-    }
->
-
-type RemoveOptional<T> = T extends OptionalSchematic<infer U> ? RemoveOptional<U> : T
-
-export type SchematicRequired<T extends SchematicObjectShape, K extends keyof T> = Flatten<
-    {
-        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<any>
-            ? RemoveOptional<T[key]["shape"]>
-            : T[key] extends NullableSchematic<any>
-              ? NullableSchematic<RemoveOptional<T[key]["shape"]>>
-              : T[key]
-    } & Pick<T, Exclude<keyof T, K>>
->
-
-export type SchematicObjectShape = {
-    [key: string]: AnySchematic
-}
 
 type UnionToIntersectionFn<T> = (T extends unknown ? (k: () => T) => void : never) extends (
     k: infer Intersection

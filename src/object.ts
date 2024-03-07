@@ -1,28 +1,44 @@
-import { addErrorToContext, assertNever, clone } from "./util"
+import { addErrorToContext, assertNever, clone, SchematicInputChild } from "./util"
 import { createInvalidTypeError } from "./error"
 import { EnumSchematic } from "./enum"
-import { OptionalSchematic, Schematic } from "./schematic"
+import { NullableSchematic, OptionalSchematic, Schematic } from "./schematic"
 import {
     DIRTY,
+    Flatten,
     InferObject,
     INVALID,
     isDirty,
     isInvalid,
+    RemoveOptional,
     SchematicErrorType,
-    SchematicExtend,
     SchematicInput,
-    SchematicInputChild,
     SchematicObjectShape,
-    SchematicOmit,
     SchematicOptions,
     SchematicParseReturnType,
-    SchematicPartial,
-    SchematicPick,
-    SchematicRequired,
     ShapeSymbol,
     UnionToTupleString,
     VALID
 } from "./types"
+
+type Extend<T, U> = Flatten<Omit<T, keyof U> & U>
+type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> = Flatten<
+    {
+        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<T[key]>
+            ? T[key]
+            : OptionalSchematic<T[key]>
+    } & {
+        [key in Exclude<keyof T, K>]: T[key]
+    }
+>
+type SchematicRequired<T extends SchematicObjectShape, K extends keyof T> = Flatten<
+    {
+        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<any>
+            ? RemoveOptional<T[key]["shape"]>
+            : T[key] extends NullableSchematic<any>
+              ? NullableSchematic<RemoveOptional<T[key]["shape"]>>
+              : T[key]
+    } & Pick<T, Exclude<keyof T, K>>
+>
 
 export enum UnknownKeys {
     Allow = "allow",
@@ -136,7 +152,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
 
     public extend<TExtend extends SchematicObjectShape>(
         shape: TExtend
-    ): ObjectSchematic<SchematicExtend<T, TExtend>> {
+    ): ObjectSchematic<Extend<T, TExtend>> {
         const newShape: any = {}
 
         for (const key in this[ShapeSymbol]) {
@@ -148,7 +164,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         }
 
         return new ObjectSchematic(newShape, this.options) as unknown as ObjectSchematic<
-            SchematicExtend<T, TExtend>
+            Extend<T, TExtend>
         >
     }
 
@@ -159,20 +175,20 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
 
     public merge<TMerge extends ObjectSchematic<any>, TShape extends TMerge["shape"]>(
         shape: TMerge
-    ): ObjectSchematic<SchematicExtend<T, TShape>> {
+    ): ObjectSchematic<Extend<T, TShape>> {
         const newShape: any = {
             ...this[ShapeSymbol],
             ...shape[ShapeSymbol]
         }
 
         return new ObjectSchematic(newShape, this.options) as unknown as ObjectSchematic<
-            SchematicExtend<T, TShape>
+            Extend<T, TShape>
         >
     }
 
     public omit<K extends keyof InferObject<T>>(
         ...keys: K[]
-    ): ObjectSchematic<SchematicOmit<T, K>> {
+    ): ObjectSchematic<Flatten<Omit<T, K>>> {
         const shape: any = {}
         for (const key in this[ShapeSymbol]) {
             if (!keys.includes(key as any)) {
@@ -204,7 +220,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
 
     public pick<K extends keyof InferObject<T>>(
         ...keys: K[]
-    ): ObjectSchematic<SchematicPick<T, K>> {
+    ): ObjectSchematic<Flatten<Pick<T, K>>> {
         const shape: any = {}
         for (const key of keys) {
             shape[key] = this[ShapeSymbol][key as any]

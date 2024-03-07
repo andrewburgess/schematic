@@ -5,6 +5,7 @@ import {
     SchematicContext,
     SchematicError,
     SchematicErrorData,
+    SchematicInput,
     ValidationCheck,
     type AssertEqual,
     type Defaultable
@@ -142,4 +143,36 @@ export function withDefault<TValue, TSchematic extends Schematic<TValue> & Defau
     cloned[DefaultValueSymbol] = defaultValue
 
     return cloned
+}
+
+export class SchematicInputChild implements SchematicInput {
+    public parent: SchematicContext
+    public value: any
+    private _path: (string | number)[]
+    private _key: string | number | (string | number)[]
+    private _cachedPath: (string | number)[] = []
+
+    constructor(
+        parent: SchematicContext,
+        value: any,
+        path: (string | number)[],
+        key: string | number | (string | number)[]
+    ) {
+        this.parent = parent
+        this.value = value
+        this._path = path
+        this._key = key
+    }
+
+    public get path() {
+        if (!this._cachedPath.length) {
+            if (this._key instanceof Array) {
+                this._cachedPath = [...this._path, ...this._key]
+            } else {
+                this._cachedPath = [...this._path, this._key]
+            }
+        }
+
+        return this._cachedPath
+    }
 }
