@@ -1,16 +1,18 @@
-import { createTooBigError, createTooSmallError } from "./error"
+import { createInvalidTypeError, createTooBigError, createTooSmallError } from "./error"
 import { Schematic } from "./schematic"
 import {
     Coercable,
     CoerceSymbol,
     DefaultValueSymbol,
     Defaultable,
-    SchematicContext,
+    INVALID,
+    SchematicInput,
     SchematicOptions,
-    SchematicParseResult,
-    SchematicTestContext
+    SchematicParseReturnType,
+    SchematicTestContext,
+    VALID
 } from "./types"
-import { addCheck, withCoerce, withDefault } from "./util"
+import { addCheck, addErrorToContext, withCoerce, withDefault } from "./util"
 
 export class DateSchematic extends Schematic<Date> implements Coercable, Defaultable<Date> {
     /**
@@ -21,14 +23,18 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
     /**
      * @internal
      */
-    async _parse(
-        value: unknown = typeof this[DefaultValueSymbol] === "function"
-            ? this[DefaultValueSymbol]()
-            : this[DefaultValueSymbol],
-        context: SchematicContext
-    ): Promise<SchematicParseResult<Date>> {
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Date>> {
+        const context = this._getInputContext(input)
+        let value = context.data
+        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+            value =
+                typeof this[DefaultValueSymbol] === "function"
+                    ? this[DefaultValueSymbol]()
+                    : this[DefaultValueSymbol]
+        }
         if (value === null || value === undefined) {
-            return this._createTypeParseError(context.path, "Date", value)
+            addErrorToContext(context, createInvalidTypeError(context.path, "Date", value))
+            return INVALID
         }
 
         if (this[CoerceSymbol]) {
@@ -41,13 +47,11 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
         }
 
         if (!(value instanceof Date) || isNaN(value.getTime())) {
-            return this._createTypeParseError(context.path, "Date", value)
+            addErrorToContext(context, createInvalidTypeError(context.path, "Date", value))
+            return INVALID
         }
 
-        return {
-            isValid: true,
-            value
-        }
+        return VALID(value)
     }
 
     public coerce() {
@@ -61,7 +65,7 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
     public max(max: number | Date, options?: SchematicOptions & { exclusive?: boolean }) {
         const maxDate = max instanceof Date ? max : new Date(max)
 
-        return addCheck(this, async (value: Date, context: SchematicTestContext) => {
+        return addCheck(this, async (value: Date, context) => {
             const isValid = options?.exclusive
                 ? value.getTime() < maxDate.getTime()
                 : value.getTime() <= maxDate.getTime()
@@ -71,7 +75,6 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
                     : `Expected Date before or on ${maxDate.toISOString()} but received ${value.toISOString()}`
                 context.addError(
                     createTooBigError(
-                        context.path,
                         value,
                         max,
                         options?.exclusive,
@@ -95,7 +98,6 @@ export class DateSchematic extends Schematic<Date> implements Coercable, Default
                     : `Expected Date on or after ${minDate.toISOString()} but received ${value.toISOString()}`
                 context.addError(
                     createTooSmallError(
-                        context.path,
                         value,
                         min,
                         options?.exclusive,

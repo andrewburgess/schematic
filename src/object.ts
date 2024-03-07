@@ -1,22 +1,29 @@
+import { addErrorToContext, assertNever, clone } from "./util"
+import { createInvalidTypeError } from "./error"
 import { EnumSchematic } from "./enum"
-import { NullableSchematic, OptionalSchematic, Schematic } from "./schematic"
+import { OptionalSchematic, Schematic } from "./schematic"
 import {
+    DIRTY,
     InferObject,
-    SchematicContext,
-    SchematicError,
+    INVALID,
+    isDirty,
+    isInvalid,
+    isValid,
     SchematicErrorType,
     SchematicExtend,
+    SchematicInput,
+    SchematicInputChild,
     SchematicObjectShape,
     SchematicOmit,
     SchematicOptions,
-    SchematicParseResult,
+    SchematicParseReturnType,
     SchematicPartial,
     SchematicPick,
     SchematicRequired,
     ShapeSymbol,
-    UnionToTupleString
+    UnionToTupleString,
+    VALID
 } from "./types"
-import { assertNever, clone } from "./util"
 
 export enum UnknownKeys {
     Allow = "allow",
@@ -54,45 +61,38 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
     /**
      * @internal
      */
-    public async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<InferObject<T>>> {
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<InferObject<T>>> {
+        const context = this._getInputContext(input)
+        let value = context.data
         // Allow an undefined value through so that default values in the shape can be used
         // to populate it
         if (
             typeof value !== "undefined" &&
             (typeof value !== "object" || value === null || Array.isArray(value))
         ) {
-            return this._createTypeParseError(context.path, "object", value)
+            addErrorToContext(context, createInvalidTypeError(context.path, "object", value))
+            return INVALID
         }
 
-        const errors: SchematicError[] = []
-        let valid = true
         const definedKeys: string[] = Object.keys(this[ShapeSymbol])
         const unknownKeys = Object.keys(value ?? {}).filter((key) => !definedKeys.includes(key))
         const result: any = {}
+        let status: SchematicParseReturnType["status"] = "valid"
 
         for (const key of definedKeys) {
             const schematic = this[ShapeSymbol][key]
             const val = (value as any)?.[key]
-            const childContext: SchematicContext = {
-                addError: function (error) {
-                    this.errors.push(error)
-                },
-                data: val,
-                errors: [],
-                path: [...context.path, key],
-                parent: context
-            }
 
-            const parsed = await schematic.runValidation(val, childContext)
+            const parsed = await schematic.runValidation(
+                new SchematicInputChild(context, val, context.path, key)
+            )
 
-            if (parsed.isValid && parsed.value !== undefined) {
+            if (isValid(parsed) && parsed.value !== undefined) {
                 result[key] = parsed.value
-            } else if (!parsed.isValid) {
-                valid = false
-                errors.push(...parsed.errors)
+            } else if (isDirty(parsed)) {
+                status = "dirty"
+            } else if (isInvalid(parsed)) {
+                status = "invalid"
             }
         }
 
@@ -104,8 +104,8 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
                     }
                     break
                 case UnknownKeys.Reject:
-                    valid = false
-                    errors.push({
+                    status = "dirty"
+                    addErrorToContext(context, {
                         message: `Unrecognized key "${unknownKeys.join('", "')}"`,
                         path: context.path,
                         keys: unknownKeys,
@@ -120,17 +120,17 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             }
         }
 
-        if (!valid) {
-            return {
-                isValid: false,
-                errors
-            }
+        if (value === undefined && status === "invalid") {
+            addErrorToContext(context, createInvalidTypeError(context.path, "object", value))
         }
 
-        return {
-            isValid: true,
-            value: result
+        if (status === "invalid") {
+            return INVALID
+        } else if (status === "dirty") {
+            return DIRTY(result)
         }
+
+        return VALID(result)
     }
 
     public extend<TExtend extends SchematicObjectShape>(
@@ -221,11 +221,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         }
 
         for (const key in this[ShapeSymbol]) {
-            if (
-                keys.includes(key as any) &&
-                (this[ShapeSymbol][key] instanceof NullableSchematic ||
-                    this[ShapeSymbol][key] instanceof OptionalSchematic)
-            ) {
+            if (keys.includes(key as any) && this[ShapeSymbol][key] instanceof OptionalSchematic) {
                 const optional = this[ShapeSymbol][key] as unknown as OptionalSchematic<any>
                 shape[key] = optional[ShapeSymbol]
             } else {

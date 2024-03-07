@@ -1,29 +1,34 @@
-import { addCheck, clone, mergeValues } from "./util"
+import { addCheck, addErrorToContext, clone, mergeValues } from "./util"
 import {
     createInvalidExactValueError,
-    createInvalidTypeError,
     createTooBigError,
     createTooSmallError,
     SchematicParseError
 } from "./error"
 import {
     CoerceSymbol,
+    DIRTY,
     INVALID,
+    isDirty,
+    isInvalid,
+    isValid,
     OutputSymbol,
-    ShapeSymbol,
     SchematicErrorType,
+    SchematicInput,
+    SchematicInputChild,
+    SchematicParseReturnType,
+    SchematicTestContext,
+    ShapeSymbol,
     TestCheck,
     TransformFn,
     TypeErrorSymbol,
+    VALID,
     ValidationCheck,
     type AnySchematic,
     type Infer,
     type SchematicContext,
     type SchematicError,
-    type SchematicOptions,
-    type SchematicParseResult,
-    VALID,
-    SchematicTestContext
+    type SchematicOptions
 } from "./types"
 
 /**
@@ -47,52 +52,71 @@ export abstract class Schematic<T> {
     /**
      * @internal
      */
-    protected _createTypeParseError(
-        path: (string | number)[],
-        type: string,
-        received: any,
-        message?: string
-    ): SchematicParseResult<T> {
-        message = message ?? this[TypeErrorSymbol]
+    protected _getContext(
+        input: SchematicInput,
+        context?: SchematicContext | null
+    ): SchematicContext {
+        return (
+            context ?? {
+                data: input.value,
+                parent: input.parent,
+                path: input.path,
+                root: input.parent.root
+            }
+        )
+    }
 
-        if (!message && typeof received === "undefined") {
-            message = path.length > 0 ? `"${path.join(".")}" is required` : "Required"
+    /**
+     * @interal
+     */
+    protected _getInputContext(input: SchematicInput): SchematicContext {
+        return {
+            data: input.value,
+            path: input.path,
+            parent: input.parent,
+            root: input.parent.root
         }
-
-        return INVALID(createInvalidTypeError(path, type, received, message))
     }
 
     /**
      * Internal method to parse a value into the type T
-     * @param value The value to parse
-     * @param context Context of the parsing
+     * @param input Input context to use for parsing
      * @internal
      * @returns The result of the parsing
      */
-    abstract _parse(value: unknown, context: SchematicContext): Promise<SchematicParseResult<T>>
+    abstract _parse(input: SchematicInput): Promise<SchematicParseReturnType<T>>
 
     /**
      * @internal
      */
-    async runValidation(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<T>> {
-        let result = await this._parse(value, context)
+    async runValidation(input: SchematicInput): Promise<SchematicParseReturnType<T>> {
+        let result = await this._parse(input)
 
-        if (!result.isValid) {
+        if (isInvalid(result)) {
             return result
         }
 
+        let context: SchematicContext | undefined
+        let dirty = false
         for (const check of this.checks) {
-            await check(result.value, context)
+            context = this._getContext(input, context)
+            const checkContext: SchematicTestContext = {
+                addError: (error) => {
+                    addErrorToContext(context!, error)
+                    dirty = true
+                },
+                get path() {
+                    return context!.path
+                }
+            }
+            await check(result.value, checkContext)
         }
 
-        if (context.errors.length > 0) {
-            return INVALID(context.errors)
+        if (dirty) {
+            return DIRTY(result.value)
         }
 
-        return result
+        return VALID(result.value)
     }
 
     public and<T extends AnySchematic>(schema: T): IntersectionSchematic<this, T> {
@@ -143,31 +167,38 @@ export abstract class Schematic<T> {
      */
     public async parse(value: unknown): Promise<T> {
         const context: SchematicContext = {
-            addError: function (error: SchematicError) {
-                this.errors.push(error)
-            },
             data: value,
-            errors: [],
             path: [],
-            parent: null
+            parent: null,
+            root: {
+                errors: []
+            }
         }
 
-        let result = await this.runValidation(value, context)
+        let result = await this.runValidation({ value, path: context.path, parent: context })
 
-        if (result.isValid) {
+        if (isValid(result)) {
             return result.value
         }
 
-        throw new SchematicParseError(result.errors)
+        throw new SchematicParseError(context.root.errors)
     }
 
-    public async safeParse(value: unknown): Promise<SchematicParseResult<T>> {
+    public async safeParse(
+        value: unknown
+    ): Promise<{ isValid: true; value: T } | { isValid: false; errors: SchematicError[] }> {
         try {
             const result = await this.parse(value)
-            return VALID(result)
+            return {
+                isValid: true,
+                value: result
+            }
         } catch (error) {
             if (error instanceof SchematicParseError) {
-                return INVALID(error.errors)
+                return {
+                    isValid: false,
+                    errors: error.errors
+                }
             }
 
             throw error
@@ -187,12 +218,11 @@ export abstract class Schematic<T> {
     }
 
     public test(check: TestCheck<T>, message?: string): this {
-        return addCheck(this, async (value: T, context: SchematicTestContext) => {
+        return this.ensure(async (value, context) => {
             const result = await check(value)
             if (!result) {
                 context.addError({
                     message: message ?? "Value did not pass test",
-                    path: context.path,
                     type: SchematicErrorType.ValidationError
                 })
             }
@@ -217,11 +247,8 @@ export class AnyValueSchematic extends Schematic<any> {
     /**
      * @internal
      */
-    async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<unknown>> {
-        return VALID(value)
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<any>> {
+        return VALID(input.value)
     }
 }
 
@@ -243,65 +270,60 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
     /**
      * @internal
      */
-    async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<Infer<T>[]>> {
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Infer<T>[]>> {
+        const context = this._getInputContext(input)
+        let value = context.data
         if (typeof value !== "object" || !Array.isArray(value)) {
-            return this._createTypeParseError(context.path, "array", value)
+            addErrorToContext(context, {
+                type: SchematicErrorType.InvalidType,
+                expected: "array",
+                received: value
+            })
+
+            return INVALID
         }
 
-        const errors: SchematicError[] = []
+        const results = await Promise.all(
+            ([...context.data] as any[]).map((item, i) => {
+                const childContext = new SchematicInputChild(context, item, context.path, i)
+                return this[ShapeSymbol].runValidation(childContext)
+            })
+        )
+
+        const parsed: Infer<T>[] = []
         let valid = true
-
-        const result: any[] = []
-
-        for (let i = 0; i < value.length; i++) {
-            const item = value[i]
-            const childContext: SchematicContext = {
-                addError: function (error) {
-                    this.errors.push(error)
-                },
-                data: item,
-                errors: [],
-                path: [...context.path, i],
-                parent: context
+        for (const result of results) {
+            if (isInvalid(result)) {
+                return INVALID
             }
 
-            const parsed = await this[ShapeSymbol].runValidation(item, childContext)
-            if (parsed.isValid) {
-                result.push(parsed.value)
-            } else {
+            if (isDirty(result)) {
                 valid = false
-                errors.push(...parsed.errors)
             }
+
+            parsed.push(result.value)
         }
 
         if (!valid) {
-            return { isValid: false, errors }
+            return DIRTY(parsed)
         }
 
-        return { isValid: true, value: result }
+        return VALID(parsed)
     }
 
     public length(length: number, options?: SchematicOptions) {
-        return addCheck(this, async (value: Infer<T>[], context: SchematicTestContext) => {
+        return addCheck(this, async (value: Infer<T>[], context) => {
             if (value.length !== length) {
                 const defaultMessage = `Expected array with exactly ${length} elements but received ${value.length}`
                 context.addError(
-                    createInvalidExactValueError(
-                        context.path,
-                        value,
-                        length,
-                        options?.message ?? defaultMessage
-                    )
+                    createInvalidExactValueError(value, length, options?.message ?? defaultMessage)
                 )
             }
         })
     }
 
     public min(min: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addCheck(this, async (value: Infer<T>[], context: SchematicTestContext) => {
+        return addCheck(this, async (value: Infer<T>[], context) => {
             const isValid = options?.exclusive ? value.length > min : value.length >= min
             if (!isValid) {
                 const defaultMessage = options?.exclusive
@@ -309,7 +331,6 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
                     : `Expected at least ${min} element${min === 1 ? "" : "s"} but received ${value.length}`
                 context.addError(
                     createTooSmallError(
-                        context.path,
                         value.length,
                         min,
                         options?.exclusive,
@@ -321,7 +342,7 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
     }
 
     public max(max: number, options?: SchematicOptions & { exclusive?: boolean }) {
-        return addCheck(this, async (value: Infer<T>[], context: SchematicTestContext) => {
+        return addCheck(this, async (value: Infer<T>[], context) => {
             const isValid = options?.exclusive ? value.length < max : value.length <= max
             if (!isValid) {
                 const defaultMessage = options?.exclusive
@@ -330,7 +351,6 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
 
                 context.addError(
                     createTooBigError(
-                        context.path,
                         value.length,
                         max,
                         options?.exclusive,
@@ -364,47 +384,41 @@ export class IntersectionSchematic<
      * @internal
      */
     async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<T[typeof OutputSymbol] & U[typeof OutputSymbol]>> {
-        const leftContext: SchematicContext = {
-            addError: function (error) {
-                this.errors.push(error)
-            },
-            data: value,
-            errors: [],
-            path: context.path,
-            parent: context
-        }
-
-        const rightContext: SchematicContext = {
-            addError: function (error) {
-                this.errors.push(error)
-            },
-            data: value,
-            errors: [],
-            path: context.path,
-            parent: context
-        }
-
+        input: SchematicInput
+    ): Promise<SchematicParseReturnType<T[typeof OutputSymbol] & U[typeof OutputSymbol]>> {
+        const context = this._getInputContext(input)
         const [left, right] = await Promise.all([
-            this.leftSchema.runValidation(value, leftContext),
-            this.rightSchema.runValidation(value, rightContext)
+            this.leftSchema.runValidation({
+                path: context.path,
+                parent: context,
+                value: context.data
+            }),
+            this.rightSchema.runValidation({
+                path: context.path,
+                parent: context,
+                value: context.data
+            })
         ])
 
-        if (!left.isValid || !right.isValid) {
-            const intersectionErrors = [left, right].flatMap((result) =>
-                result.isValid ? [] : result.errors
-            )
-            return INVALID(intersectionErrors)
+        if (isInvalid(left) || isInvalid(right)) {
+            return INVALID
         }
 
-        const merged = mergeValues(left.value, right.value, context)
+        const merged = mergeValues(left.value, right.value)
         if (!merged.isValid) {
-            return INVALID(merged.errors)
+            addErrorToContext(context, {
+                received: input.value,
+                type: SchematicErrorType.InvalidIntersection
+            })
+
+            return INVALID
         }
 
-        return merged
+        if (isDirty(left) || isDirty(right)) {
+            return DIRTY(merged.value)
+        }
+
+        return VALID(merged.value)
     }
 }
 
@@ -419,15 +433,20 @@ export class LiteralSchematic<T extends string | number | boolean> extends Schem
     /**
      * @internal
      */
-    async _parse(value: unknown, context: SchematicContext): Promise<SchematicParseResult<T>> {
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<T>> {
+        const context = this._getInputContext(input)
+        let value = context.data
+
         if (value !== this.value) {
-            return INVALID(createInvalidExactValueError(context.path, value, this.value))
+            addErrorToContext(context, {
+                type: SchematicErrorType.InvalidExactValue,
+                expected: this.value,
+                received: input.value
+            })
+            return INVALID
         }
 
-        return {
-            isValid: true,
-            value: this.value
-        }
+        return VALID(this.value)
     }
 }
 
@@ -448,36 +467,13 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
     /**
      * @internal
      */
-    async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<Infer<T> | null>> {
-        if (value === null) {
-            return {
-                isValid: true,
-                value: null
-            }
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Infer<T> | null>> {
+        if (input.value === null) {
+            return VALID(null)
         }
 
-        return this[ShapeSymbol]._parse(value, context)
-    }
-
-    async runValidation(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<Infer<T> | null>> {
-        if (value === null) {
-            return {
-                isValid: true,
-                value: null
-            }
-        }
-
-        if (value === undefined && !(this[ShapeSymbol] instanceof OptionalSchematic)) {
-            return this._createTypeParseError(context.path, "nullable", value)
-        }
-
-        return this[ShapeSymbol].runValidation(value, context)
+        const shape = this[ShapeSymbol]
+        return shape._parse(input)
     }
 
     public required<T extends AnySchematic = this["shape"]>(): T {
@@ -487,7 +483,10 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
             return shape.required()
         }
 
-        return this[ShapeSymbol] as unknown as T
+        const cloned = clone(shape) as unknown as T
+        cloned.checks = [...cloned.checks, ...this.checks]
+
+        return cloned
     }
 }
 
@@ -511,32 +510,14 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
     /**
      * @internal
      */
-    async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<Infer<T> | undefined>> {
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Infer<T> | undefined>> {
+        const { value } = input
         if (value === undefined) {
-            return {
-                isValid: true,
-                value: undefined
-            }
+            return VALID(undefined)
         }
 
-        return this[ShapeSymbol]._parse(value, context)
-    }
-
-    async runValidation(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<Infer<T> | undefined>> {
-        if (value === undefined) {
-            return {
-                isValid: true,
-                value: undefined
-            }
-        }
-
-        return this[ShapeSymbol].runValidation(value, context)
+        const shape = this[ShapeSymbol]
+        return shape._parse(input)
     }
 
     public required<T extends AnySchematic = this["shape"]>(): T {
@@ -546,7 +527,10 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
             return shape.required()
         }
 
-        return this[ShapeSymbol] as unknown as T
+        const cloned = clone(shape) as unknown as T
+        cloned.checks = [...cloned.checks, ...this.checks]
+
+        return cloned
     }
 }
 
@@ -567,17 +551,18 @@ export class PipedSchematic<
     /**
      * @internal
      */
-    async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<Infer<TOutput>>> {
-        const parsed = await this.inputSchema.runValidation(value, context)
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Infer<TOutput>>> {
+        const parsed = await this.inputSchema.runValidation(input)
 
-        if (!parsed.isValid) {
-            return INVALID(parsed.errors)
+        if (isInvalid(parsed)) {
+            return INVALID
         }
 
-        return this.outputSchema.runValidation(parsed.value, context)
+        return this.outputSchema.runValidation({
+            value: parsed.value,
+            path: input.path,
+            parent: input.parent
+        })
     }
 }
 export class TransformSchematic<TInput extends AnySchematic, TOutput> extends Schematic<TOutput> {
@@ -594,35 +579,31 @@ export class TransformSchematic<TInput extends AnySchematic, TOutput> extends Sc
     /**
      * @internal
      */
-    async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<TOutput>> {
-        const childContext: SchematicContext = {
-            addError: function (error) {
-                this.errors.push(error)
-            },
-            data: value,
-            errors: [],
-            path: context.path,
-            parent: context
-        }
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<TOutput>> {
+        const context = this._getInputContext(input)
+        const result = await this.schema.runValidation(input)
 
-        const result = await this.schema.runValidation(value, childContext)
-
-        if (!result.isValid) {
+        if (isInvalid(result)) {
             return result
         }
 
-        const transformed = await this.transformFn(result.value, childContext)
-        if (childContext.errors.length > 0) {
-            return INVALID(childContext.errors)
+        let dirty = false
+        const transformContext: SchematicTestContext = {
+            addError: (error) => {
+                addErrorToContext(context, error)
+                dirty = true
+            },
+            get path() {
+                return context.path
+            }
+        }
+        const transformed = await this.transformFn(result.value, transformContext)
+
+        if (dirty) {
+            return DIRTY(transformed)
         }
 
-        return {
-            isValid: true,
-            value: transformed
-        }
+        return VALID(transformed)
     }
 }
 
@@ -644,40 +625,53 @@ export class UnionSchematic<
      * @internal
      */
     async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<T[number][typeof OutputSymbol]>> {
+        input: SchematicInput
+    ): Promise<SchematicParseReturnType<T[number][typeof OutputSymbol]>> {
+        const context = this._getInputContext(input)
         const results = await Promise.all(
             this.schemas.map((schema) => {
                 const childContext: SchematicContext = {
-                    addError: function (error) {
-                        this.errors.push(error)
-                    },
-                    data: value,
-                    errors: [],
-                    path: context.path,
-                    parent: context
+                    ...context,
+                    parent: null,
+                    root: {
+                        ...context.root,
+                        errors: []
+                    }
                 }
-                return schema.runValidation(value, childContext)
+                return schema
+                    .runValidation({
+                        value: context.data,
+                        path: context.path,
+                        parent: childContext
+                    })
+                    .then((result) => ({
+                        result,
+                        context: childContext
+                    }))
             })
         )
 
         for (const result of results) {
-            if (result.isValid) {
-                return result
+            if (isValid(result.result)) {
+                return result.result
             }
         }
 
-        const unionErrors = results.flatMap((result) => (result.isValid ? [] : result.errors))
+        for (const result of results) {
+            if (isDirty(result.result)) {
+                context.root.errors.push(...result.context.root.errors)
+                return result.result
+            }
+        }
 
-        return INVALID([
-            {
-                message: this[TypeErrorSymbol] ?? "Value did not match any types",
-                path: context.path,
-                received: value,
-                type: SchematicErrorType.InvalidUnion
-            },
-            ...unionErrors
-        ])
+        const unionErrors = results.flatMap((result) => result.context.root.errors)
+        addErrorToContext(context, {
+            message: "Value did not match any types",
+            received: input.value,
+            unionErrors,
+            type: SchematicErrorType.InvalidUnion
+        })
+
+        return INVALID
     }
 }

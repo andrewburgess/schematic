@@ -1,6 +1,7 @@
 import {
     createInvalidExactValueError,
     createInvalidStringError,
+    createInvalidTypeError,
     createTooBigError,
     createTooSmallError
 } from "./error"
@@ -10,12 +11,14 @@ import {
     CoerceSymbol,
     DefaultValueSymbol,
     Defaultable,
-    SchematicContext,
+    INVALID,
+    SchematicInput,
     SchematicOptions,
-    SchematicParseResult,
-    SchematicTestContext
+    SchematicParseReturnType,
+    SchematicTestContext,
+    VALID
 } from "./types"
-import { addCheck, withCoerce, withDefault } from "./util"
+import { addCheck, addErrorToContext, withCoerce, withDefault } from "./util"
 
 const EMAIL_REGEX =
     /^(?!\.)(?!.*\.\.)([A-Z0-9_+-\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\-]*\.)+[A-Z]{2,}$/i
@@ -29,12 +32,17 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
     /**
      * @internal
      */
-    public async _parse(
-        value: unknown = typeof this[DefaultValueSymbol] === "function"
-            ? this[DefaultValueSymbol]()
-            : this[DefaultValueSymbol],
-        context: SchematicContext
-    ): Promise<SchematicParseResult<string>> {
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<string>> {
+        const context = this._getInputContext(input)
+        let value = context.data
+
+        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+            value =
+                typeof this[DefaultValueSymbol] === "function"
+                    ? this[DefaultValueSymbol]()
+                    : this[DefaultValueSymbol]
+        }
+
         if (typeof value !== "string" && this[CoerceSymbol]) {
             switch (typeof value) {
                 case "function":
@@ -55,13 +63,11 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
         }
 
         if (typeof value !== "string") {
-            return this._createTypeParseError(context.path, "string", value)
+            addErrorToContext(context, createInvalidTypeError(context.path, "string", value))
+            return INVALID
         }
 
-        return {
-            isValid: true,
-            value
-        }
+        return VALID(value)
     }
 
     public coerce() {
@@ -84,7 +90,6 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
             if (!value.endsWith(suffix)) {
                 context.addError(
                     createInvalidStringError(
-                        context.path,
                         value,
                         options?.message ??
                             `Expected string to end with ${suffix} but received ${value}`
@@ -99,7 +104,6 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
             if (!value.includes(substring)) {
                 context.addError(
                     createInvalidStringError(
-                        context.path,
                         value,
                         options?.message ??
                             `Expected string to include ${substring} but received ${value}`
@@ -114,7 +118,6 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
             if (value.length !== length) {
                 context.addError(
                     createInvalidExactValueError(
-                        context.path,
                         value,
                         length,
                         options?.message ??
@@ -134,7 +137,6 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
                     : `Expected string with length at least ${min} but received string with length ${value.length}`
                 context.addError(
                     createTooSmallError(
-                        context.path,
                         value,
                         min,
                         options?.exclusive,
@@ -154,7 +156,6 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
                     : `Expected string with length at most ${max} but received string with length ${value.length}`
                 context.addError(
                     createTooBigError(
-                        context.path,
                         value,
                         max,
                         options?.exclusive,
@@ -170,7 +171,6 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
             if (!regex.test(value)) {
                 context.addError(
                     createInvalidStringError(
-                        context.path,
                         value,
                         options?.message ??
                             `Expected string to match ${regex} but received ${value}`
@@ -185,7 +185,6 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
             if (!value.startsWith(prefix)) {
                 context.addError(
                     createInvalidStringError(
-                        context.path,
                         value,
                         options?.message ??
                             `Expected string to start with ${prefix} but received ${value}`

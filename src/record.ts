@@ -1,11 +1,18 @@
+import { addErrorToContext } from "./util"
+import { createInvalidTypeError } from "./error"
 import { Schematic } from "./schematic"
 import {
     AnySchematic,
+    DIRTY,
+    INVALID,
+    isDirty,
+    isInvalid,
     KeySchemaSymbol,
-    SchematicContext,
-    SchematicError,
+    SchematicInput,
+    SchematicInputChild,
     SchematicOptions,
-    SchematicParseResult,
+    SchematicParseReturnType,
+    VALID,
     ValueSchemaSymbol
 } from "./types"
 
@@ -26,60 +33,54 @@ export class RecordSchematic<TKeySchema extends AnySchematic, TValue = any> exte
      * @internal
      */
     async _parse(
-        value: unknown,
-        context: SchematicContext
-    ): Promise<SchematicParseResult<Record<string | number, TValue>>> {
-        if (typeof value !== "object" || value === null) {
-            return this._createTypeParseError(context.path, "object", value)
-        }
+        input: SchematicInput
+    ): Promise<SchematicParseReturnType<Record<string | number, TValue>>> {
+        const context = this._getInputContext(input)
+        let value = context.data
 
-        const errors: SchematicError[] = []
-        let valid = true
+        if (typeof value !== "object" || value === null) {
+            addErrorToContext(context, createInvalidTypeError(context.path, "object", value))
+            return INVALID
+        }
 
         const result: Record<string | number, TValue> = {} as Record<string | number, TValue>
         const keys = Object.keys(value)
+        let status: SchematicParseReturnType["status"] = "valid"
 
         for (const key of keys) {
-            const childContext: SchematicContext = {
-                addError: function (error) {
-                    this.errors.push(error)
-                },
-                data: value,
-                errors: [],
-                path: context.path.concat(key),
-                parent: context
-            }
+            const keyResult = await this[KeySchemaSymbol].runValidation(
+                new SchematicInputChild(context, key, context.path, key)
+            )
+            if (isInvalid(keyResult)) {
+                status = "invalid"
 
-            const keyResult = await this[KeySchemaSymbol].runValidation(key, childContext)
-            if (!keyResult.isValid) {
-                valid = false
-                errors.push(...keyResult.errors)
                 continue
+            } else if (isDirty(keyResult)) {
+                status = "dirty"
             }
 
             const valueResult = await this[ValueSchemaSymbol].runValidation(
-                (value as any)[key],
-                childContext
+                new SchematicInputChild(context, value[key], context.path, key)
             )
-            if (!valueResult.isValid) {
-                valid = false
-                errors.push(...valueResult.errors)
+
+            if (isInvalid(valueResult)) {
+                status = "invalid"
                 continue
+            } else if (isDirty(valueResult)) {
+                status = "dirty"
             }
 
             result[keyResult.value as any] = valueResult.value
         }
 
-        if (!valid) {
-            return {
-                errors,
-                isValid: false
-            }
+        if (status === "invalid") {
+            return INVALID
         }
 
-        return {
-            isValid: true,
-            value: value as Record<string | number, TValue>
+        if (status === "dirty") {
+            return DIRTY(result)
         }
+
+        return VALID(result)
     }
 }

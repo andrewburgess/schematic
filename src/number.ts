@@ -5,12 +5,14 @@ import {
     CoerceSymbol,
     DefaultValueSymbol,
     Defaultable,
-    SchematicContext,
+    INVALID,
+    SchematicInput,
     SchematicOptions,
-    SchematicParseResult,
-    SchematicTestContext
+    SchematicParseReturnType,
+    SchematicTestContext,
+    VALID
 } from "./types"
-import { addCheck, withCoerce, withDefault } from "./util"
+import { addCheck, addErrorToContext, withCoerce, withDefault } from "./util"
 
 export class NumberSchematic extends Schematic<number> implements Coercable, Defaultable<number> {
     /**
@@ -21,12 +23,17 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
     /**
      * @internal
      */
-    async _parse(
-        value: unknown = typeof this[DefaultValueSymbol] === "function"
-            ? this[DefaultValueSymbol]()
-            : this[DefaultValueSymbol],
-        context: SchematicContext
-    ): Promise<SchematicParseResult<number>> {
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<number>> {
+        const context = this._getInputContext(input)
+        let value = context.data
+
+        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+            value =
+                typeof this[DefaultValueSymbol] === "function"
+                    ? this[DefaultValueSymbol]()
+                    : this[DefaultValueSymbol]
+        }
+
         if (this[CoerceSymbol]) {
             if (typeof value !== "number") {
                 const coerced = Number(value)
@@ -37,13 +44,11 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
         }
 
         if (typeof value !== "number") {
-            return this._createTypeParseError(context.path, "number", value)
+            addErrorToContext(context, createInvalidTypeError(context.path, "number", value))
+            return INVALID
         }
 
-        return {
-            isValid: true,
-            value
-        }
+        return VALID(value)
     }
 
     public coerce() {
@@ -66,7 +71,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
         return addCheck(this, async (value: number, context: SchematicTestContext) => {
             const isValid = options?.exclusive ? value < max : value <= max
             if (!isValid) {
-                context.addError(createTooBigError(context.path, value, max, options?.exclusive))
+                context.addError(createTooBigError(value, max, options?.exclusive))
             }
         })
     }
@@ -75,7 +80,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
         return addCheck(this, async (value: number, context: SchematicTestContext) => {
             const isValid = options?.exclusive ? value > min : value >= min
             if (!isValid) {
-                context.addError(createTooSmallError(context.path, value, min, options?.exclusive))
+                context.addError(createTooSmallError(value, min, options?.exclusive))
             }
         })
     }
@@ -83,7 +88,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
     public negative() {
         return addCheck(this, async (value: number, context: SchematicTestContext) => {
             if (value > 0) {
-                context.addError(createTooBigError(context.path, value, 0, false))
+                context.addError(createTooBigError(value, 0, false))
             }
         })
     }
@@ -91,7 +96,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
     public nonnegative() {
         return addCheck(this, async (value: number, context: SchematicTestContext) => {
             if (value < 0) {
-                context.addError(createTooSmallError(context.path, value, 0, true))
+                context.addError(createTooSmallError(value, 0, true))
             }
         })
     }
@@ -99,7 +104,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
     public positive() {
         return addCheck(this, async (value: number, context: SchematicTestContext) => {
             if (value < 0) {
-                context.addError(createTooSmallError(context.path, value, 0, false))
+                context.addError(createTooSmallError(value, 0, false))
             }
         })
     }

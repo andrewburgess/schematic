@@ -1,5 +1,9 @@
 import { AnyValueSchematic, NullableSchematic, OptionalSchematic, Schematic } from "./schematic"
 
+// #region Utility Types
+export type OmitKeys<T, K extends string> = Pick<T, Exclude<keyof T, K>>
+// #endregion
+
 // #region Schematic Symbols
 export const CoerceSymbol = Symbol("coerce")
 export const DefaultValueSymbol = Symbol("defaultValue")
@@ -36,14 +40,18 @@ export interface Defaultable<TValue> {
 
 // #region Schematic Validation
 export interface SchematicContext {
-    addError(error: SchematicError): void
-    readonly data?: any
-    readonly errors: SchematicError[]
+    readonly data: any
     readonly path: (string | number)[]
     readonly parent?: SchematicContext | null
+    readonly root: {
+        readonly errors: SchematicError[]
+    }
 }
 
-export type SchematicTestContext = Pick<SchematicContext, "addError" | "path">
+export interface SchematicTestContext {
+    addError: (error: SchematicErrorData) => void
+    path: (string | number)[]
+}
 
 export type TransformFn<TSchematic, TOutput> = (
     value: Infer<TSchematic>,
@@ -56,14 +64,6 @@ export type ValidationCheck<TValue> = (
 ) => Promise<void> | void
 
 export type TestCheck<TValue> = (value: TValue) => Promise<boolean> | boolean
-
-export const INVALID = <T>(errors: SchematicError | SchematicError[]): SchematicParseResult<T> => ({
-    errors: Array.isArray(errors) ? errors : [errors],
-    isValid: false
-})
-export const VALID = <T>(value: T): SchematicParseResult<T> => ({ isValid: true, value })
-
-export const NEVER = INVALID as never
 
 export enum SchematicErrorType {
     InvalidExactValue = "InvalidExactValue",
@@ -79,65 +79,66 @@ export enum SchematicErrorType {
 }
 
 interface BaseSchematicError {
-    message: string
+    message?: string
     path: (string | number)[]
 }
 
-export type SchematicInvalidExactValueError = BaseSchematicError & {
+export interface SchematicInvalidExactValueError extends BaseSchematicError {
     type: SchematicErrorType.InvalidExactValue
     expected: any
     received: any
 }
 
-export type SchematicInvalidIntersectionError = BaseSchematicError & {
+export interface SchematicInvalidIntersectionError extends BaseSchematicError {
     received: any
     type: SchematicErrorType.InvalidIntersection
 }
 
-export type SchematicInvalidStringError = BaseSchematicError & {
+export interface SchematicInvalidStringError extends BaseSchematicError {
     type: SchematicErrorType.InvalidString
     received: any
 }
 
-export type SchematicInvalidTypeError = BaseSchematicError & {
+export interface SchematicInvalidTypeError extends BaseSchematicError {
     expected: any
     received: any
     type: SchematicErrorType.InvalidType
 }
 
-export type SchematicInvalidUnionError = BaseSchematicError & {
+export interface SchematicInvalidUnionError extends BaseSchematicError {
     received: any
+    unionErrors: SchematicError[]
     type: SchematicErrorType.InvalidUnion
 }
 
-export type SchematicTooBigError = BaseSchematicError & {
+export interface SchematicTooBigError extends BaseSchematicError {
     type: SchematicErrorType.TooBig
     maximum: number | Date
     received: any
 }
 
-export type SchematicTooSmallError = BaseSchematicError & {
+export interface SchematicTooSmallError extends BaseSchematicError {
     type: SchematicErrorType.TooSmall
     minimum: number | Date
     received: any
 }
 
-export type SchematicUnrecognizedKeysError = BaseSchematicError & {
+export interface SchematicUnrecognizedKeysError extends BaseSchematicError {
     keys: Array<string | number>
     type: SchematicErrorType.UnrecognizedKeys
 }
 
-export type SchematicUnrecognizedValueError = BaseSchematicError & {
+export interface SchematicUnrecognizedValueError extends BaseSchematicError {
     expected: Array<string | number>
     received: any
     type: SchematicErrorType.UnrecognizedValue
 }
 
-export type SchematicValidationError = BaseSchematicError & {
+export interface SchematicValidationError extends BaseSchematicError {
     type: SchematicErrorType.ValidationError
 }
 
-export type SchematicError =
+export type SchematicErrorWithoutMessage =
     | SchematicInvalidExactValueError
     | SchematicInvalidIntersectionError
     | SchematicInvalidStringError
@@ -149,17 +150,78 @@ export type SchematicError =
     | SchematicUnrecognizedValueError
     | SchematicValidationError
 
-type SchematicParseFailure = {
-    errors: SchematicError[]
-    isValid: false
+export type SchematicError = SchematicErrorWithoutMessage & {
+    fatal?: boolean
+    message: string
 }
 
-type SchematicParseSuccess<T> = {
-    isValid: true
+type RemovePath<T extends object> = T extends any ? OmitKeys<T, "path"> : never
+export type SchematicErrorData = RemovePath<SchematicErrorWithoutMessage> & {
+    path?: (string | number)[]
+}
+
+export type SchematicInput<T = any> = {
     value: T
+    path: (string | number)[]
+    parent: SchematicContext
 }
 
-export type SchematicParseResult<T> = SchematicParseFailure | SchematicParseSuccess<T>
+export class SchematicInputChild implements SchematicInput {
+    public parent: SchematicContext
+    public value: any
+    private _path: (string | number)[]
+    private _key: string | number | (string | number)[]
+    private _cachedPath: (string | number)[] = []
+
+    constructor(
+        parent: SchematicContext,
+        value: any,
+        path: (string | number)[],
+        key: string | number | (string | number)[]
+    ) {
+        this.parent = parent
+        this.value = value
+        this._path = path
+        this._key = key
+    }
+
+    public get path() {
+        if (!this._cachedPath.length) {
+            if (this._key instanceof Array) {
+                this._cachedPath = [...this._path, ...this._key]
+            } else {
+                this._cachedPath = [...this._path, this._key]
+            }
+        }
+
+        return this._cachedPath
+    }
+}
+
+export interface SchematicParseResult {
+    status: "valid" | "invalid" | "dirty"
+    data: any
+}
+
+export type INVALID = { status: "invalid" }
+export const INVALID: INVALID = Object.freeze({ status: "invalid" })
+export const NEVER = INVALID as never
+
+export type DIRTY<T> = { status: "dirty"; value: T }
+export const DIRTY = <T>(value: T): DIRTY<T> => ({ status: "dirty", value })
+
+export type VALID<T> = { status: "valid"; value: T }
+export const VALID = <T>(value: T): VALID<T> => ({ status: "valid", value })
+
+export type SchematicParseReturnType<T = any> = VALID<T> | DIRTY<T> | INVALID
+
+export const isInvalid = (result: SchematicParseReturnType<any>): result is INVALID =>
+    result.status === "invalid"
+export const isDirty = <T>(result: SchematicParseReturnType<T>): result is DIRTY<T> =>
+    result.status === "dirty"
+export const isValid = <T>(result: SchematicParseReturnType<T>): result is VALID<T> =>
+    result.status === "valid"
+
 // #endregion
 
 // #region Schematic Type Testing

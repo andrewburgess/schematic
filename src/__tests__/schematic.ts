@@ -15,15 +15,22 @@ test("should allow adding custom validator", async () => {
         }
     })
 
-    try {
-        await schema.parse(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Value cannot be false")
-    }
+    const invalidBoolean = await schema.safeParse(false)
+    assert(!invalidBoolean.isValid)
+    expect(invalidBoolean.errors[0].message).toBe("Value cannot be false")
+})
+
+test("an optional schematic with a custom validator that is made required should run the validator", async () => {
+    const schema = schematic
+        .boolean()
+        .optional()
+        .test((value) => {
+            return value === true
+        }, "Value must be true")
+
+    const invalidBoolean = await schema.required().safeParse(false)
+    assert(!invalidBoolean.isValid)
+    expect(invalidBoolean.errors[0].message).toBe("Value must be true")
 })
 
 test("should allow specifying optional multiple times", async () => {

@@ -1,15 +1,15 @@
-import { createUnrecognizedValueError } from "./error"
+import { createInvalidTypeError, createUnrecognizedValueError } from "./error"
 import { Schematic } from "./schematic"
 import {
-    EnumType,
-    VALID,
-    SchematicContext,
-    SchematicParseResult,
-    INVALID,
     Defaultable,
-    DefaultValueSymbol
+    DefaultValueSymbol,
+    EnumType,
+    INVALID,
+    SchematicInput,
+    SchematicParseReturnType,
+    VALID
 } from "./types"
-import { withDefault } from "./util"
+import { addErrorToContext, withDefault } from "./util"
 
 type EnumKeys<TEnum> = TEnum extends readonly (string | number)[]
     ? TEnum[number]
@@ -39,12 +39,16 @@ export class EnumSchematic<T extends EnumType>
     /**
      * @internal
      */
-    async _parse(
-        value: unknown = typeof this[DefaultValueSymbol] === "function"
-            ? this[DefaultValueSymbol]()
-            : this[DefaultValueSymbol],
-        context: SchematicContext
-    ): Promise<SchematicParseResult<EnumKeys<T>>> {
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<EnumKeys<T>>> {
+        const context = this._getInputContext(input)
+        let value = context.data
+        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+            value =
+                typeof this[DefaultValueSymbol] === "function"
+                    ? this[DefaultValueSymbol]()
+                    : this[DefaultValueSymbol]
+        }
+
         if (typeof value === "string" || typeof value === "number") {
             if (Object.values(this.enumeration).includes(value)) {
                 return VALID(value as EnumKeys<T>)
@@ -52,10 +56,12 @@ export class EnumSchematic<T extends EnumType>
         }
 
         if (typeof value === "undefined") {
-            return this._createTypeParseError(context.path, "enum", value)
+            addErrorToContext(context, createInvalidTypeError(context.path, "enum", value))
+            return INVALID
         }
 
-        return INVALID(createUnrecognizedValueError(context.path, value, this.enumeration))
+        addErrorToContext(context, createUnrecognizedValueError(value, this.enumeration))
+        return INVALID
     }
 
     public default(defaultValue: EnumKeys<T> | (() => EnumKeys<T>)): EnumSchematic<T> {

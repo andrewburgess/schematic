@@ -1,3 +1,4 @@
+import assert from "assert"
 import * as schematic from "../"
 import { assertEqualType } from "../util"
 
@@ -204,16 +205,10 @@ test("rejects type if not all properties have defaults and object is undefined",
         bar: schematic.number()
     })
 
-    try {
-        await base.parse(undefined)
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe('"bar" is required')
-    }
+    const result = await base.safeParse(undefined)
+    assert(!result.isValid)
+
+    expect(result.errors[0].message).toBe('"bar" is required')
 })
 
 test("can create enum from object keys", async () => {

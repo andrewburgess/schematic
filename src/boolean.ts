@@ -1,13 +1,16 @@
+import { createInvalidTypeError } from "./error"
 import { Schematic } from "./schematic"
 import {
     Coercable,
     CoerceSymbol,
     DefaultValueSymbol,
     Defaultable,
-    SchematicContext,
-    SchematicParseResult
+    INVALID,
+    SchematicInput,
+    SchematicParseReturnType,
+    VALID
 } from "./types"
-import { withCoerce, withDefault } from "./util"
+import { addErrorToContext, withCoerce, withDefault } from "./util"
 
 export class BooleanSchematic
     extends Schematic<boolean>
@@ -21,12 +24,16 @@ export class BooleanSchematic
     /**
      * @internal
      */
-    async _parse(
-        value: unknown = typeof this[DefaultValueSymbol] === "function"
-            ? this[DefaultValueSymbol]()
-            : this[DefaultValueSymbol],
-        context: SchematicContext
-    ): Promise<SchematicParseResult<boolean>> {
+    async _parse(input: SchematicInput): Promise<SchematicParseReturnType<boolean>> {
+        const context = this._getInputContext(input)
+        let value = context.data
+        if (typeof value === "undefined" && this[DefaultValueSymbol] !== undefined) {
+            value =
+                typeof this[DefaultValueSymbol] === "function"
+                    ? this[DefaultValueSymbol]()
+                    : this[DefaultValueSymbol]
+        }
+
         if (this[CoerceSymbol]) {
             switch (typeof value) {
                 case "string": {
@@ -49,13 +56,11 @@ export class BooleanSchematic
         }
 
         if (typeof value !== "boolean") {
-            return this._createTypeParseError(context.path, "boolean", value)
+            addErrorToContext(context, createInvalidTypeError(context.path, "boolean", value))
+            return INVALID
         }
 
-        return {
-            isValid: true,
-            value
-        }
+        return VALID(value)
     }
 
     public coerce() {
