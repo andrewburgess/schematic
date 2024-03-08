@@ -51,22 +51,23 @@ export interface SchematicObjectOptions extends SchematicOptions {
 
 export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<InferObject<T>> {
     /** @internal */
-    private readonly _shape: T
-    private readonly unknownKeys: UnknownKeys = UnknownKeys.Strip
+    _options: SchematicObjectOptions = {}
+    /** @internal */
+    _shape: T
+    /** @internal */
+    _unknownKeys: UnknownKeys = UnknownKeys.Strip
 
     public get shape(): T {
         return this._shape
     }
 
-    constructor(
-        shape: T,
-        private readonly options: SchematicObjectOptions = {}
-    ) {
+    constructor(shape: T, options: SchematicObjectOptions = {}) {
         super(options)
+        this._options = options
         this._shape = shape
 
-        if (this.options.unknownKeys) {
-            this.unknownKeys = this.options.unknownKeys
+        if (this._options.unknownKeys) {
+            this._unknownKeys = this._options.unknownKeys
         }
     }
 
@@ -111,7 +112,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         }
 
         if (unknownKeys.length > 0) {
-            switch (this.unknownKeys) {
+            switch (this._unknownKeys) {
                 case UnknownKeys.Allow:
                     for (const key of unknownKeys) {
                         result[key] = (value as any)[key]
@@ -130,7 +131,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
                 case UnknownKeys.Strip:
                     break
                 default:
-                    assertNever(this.unknownKeys)
+                    assertNever(this._unknownKeys)
             }
         }
 
@@ -147,6 +148,12 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         return VALID(result)
     }
 
+    public allowUnknownKeys(): ObjectSchematic<T> {
+        const cloned = clone(this)
+        cloned._unknownKeys = UnknownKeys.Allow
+        return cloned
+    }
+
     public extend<TExtend extends SchematicObjectShape>(
         shape: TExtend
     ): ObjectSchematic<Extend<T, TExtend>> {
@@ -160,7 +167,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             newShape[key] = clone(shape[key])
         }
 
-        return new ObjectSchematic(newShape, this.options) as unknown as ObjectSchematic<
+        return new ObjectSchematic(newShape, this._options) as unknown as ObjectSchematic<
             Extend<T, TExtend>
         >
     }
@@ -178,7 +185,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             ...shape.shape
         }
 
-        return new ObjectSchematic(newShape, this.options) as unknown as ObjectSchematic<
+        return new ObjectSchematic(newShape, this._options) as unknown as ObjectSchematic<
             Extend<T, TShape>
         >
     }
@@ -192,7 +199,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
                 shape[key] = this.shape[key]
             }
         }
-        return new ObjectSchematic(shape, this.options)
+        return new ObjectSchematic(shape, this._options)
     }
 
     public partial<K extends keyof InferObject<T> = keyof InferObject<T>>(
@@ -212,7 +219,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             }
         }
 
-        return new ObjectSchematic(shape, this.options)
+        return new ObjectSchematic(shape, this._options)
     }
 
     public pick<K extends keyof InferObject<T>>(
@@ -222,7 +229,13 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         for (const key of keys) {
             shape[key] = this.shape[key as any]
         }
-        return new ObjectSchematic(shape, this.options)
+        return new ObjectSchematic(shape, this._options)
+    }
+
+    public rejectUnknownKeys(): ObjectSchematic<T> {
+        const cloned = clone(this)
+        cloned._unknownKeys = UnknownKeys.Reject
+        return cloned
     }
 
     public required<K extends keyof InferObject<T> = keyof InferObject<T>>(
@@ -243,6 +256,12 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             }
         }
 
-        return new ObjectSchematic(shape, this.options)
+        return new ObjectSchematic(shape, this._options)
+    }
+
+    public stripUnknownKeys(): ObjectSchematic<T> {
+        const cloned = clone(this)
+        cloned._unknownKeys = UnknownKeys.Strip
+        return cloned
     }
 }

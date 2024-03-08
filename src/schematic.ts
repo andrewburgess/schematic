@@ -235,18 +235,18 @@ export abstract class Schematic<T> {
 }
 
 export class AnyValueSchematic extends Schematic<any> {
-    protected readonly _any = true as const
+    /** @internal */
+    _any = true as const
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<any>> {
         return VALID(input.value)
     }
 }
 
 export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]> {
-    private _shape: T
+    /** @internal */
+    _shape: T
 
     constructor(shape: T) {
         super()
@@ -360,30 +360,30 @@ export class IntersectionSchematic<
     T extends AnySchematic,
     U extends AnySchematic
 > extends Schematic<T[typeof OutputSymbol] & U[typeof OutputSymbol]> {
-    private readonly leftSchema: T
-    private readonly rightSchema: U
+    /** @internal */
+    _leftSchema: T
+    /** @internal */
+    _rightSchema: U
 
     constructor(left: T, right: U) {
         super()
 
-        this.leftSchema = left
-        this.rightSchema = right
+        this._leftSchema = left
+        this._rightSchema = right
     }
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(
         input: SchematicInput
     ): Promise<SchematicParseReturnType<T[typeof OutputSymbol] & U[typeof OutputSymbol]>> {
         const context = this._getInputContext(input)
         const [left, right] = await Promise.all([
-            this.leftSchema.runValidation({
+            this._leftSchema.runValidation({
                 path: context.path,
                 parent: context,
                 value: context.data
             }),
-            this.rightSchema.runValidation({
+            this._rightSchema.runValidation({
                 path: context.path,
                 parent: context,
                 value: context.data
@@ -413,36 +413,36 @@ export class IntersectionSchematic<
 }
 
 export class LiteralSchematic<T extends string | number | boolean> extends Schematic<T> {
-    private readonly value: T
+    /** @internal */
+    _value: T
 
     constructor(value: T) {
         super()
-        this.value = value
+        this._value = value
     }
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<T>> {
         const context = this._getInputContext(input)
         let value = context.data
 
-        if (value !== this.value) {
+        if (value !== this._value) {
             addErrorToContext(context, {
                 type: SchematicErrorType.InvalidExactValue,
-                expected: this.value,
+                expected: this._value,
                 received: input.value
             })
             return INVALID
         }
 
-        return VALID(this.value)
+        return VALID(this._value)
     }
 }
 
 export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T> | null> {
     protected readonly _nullable = true as const
-    private readonly _shape: T
+    /** @internal */
+    _shape: T
 
     constructor(schematic: T) {
         super()
@@ -454,9 +454,7 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
         return this._shape
     }
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Infer<T> | null>> {
         if (input.value === null) {
             return VALID(null)
@@ -482,7 +480,8 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
 
 export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T> | undefined> {
     protected readonly _optional = true as const
-    private readonly _shape: T
+    /** @internal */
+    _shape: T
 
     constructor(schematic: T) {
         super()
@@ -494,9 +493,7 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
         return this._shape
     }
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Infer<T> | undefined>> {
         const { value } = input
         if (value === undefined) {
@@ -525,21 +522,21 @@ export class PipedSchematic<
     TInput extends AnySchematic,
     TOutput extends AnySchematic
 > extends Schematic<Infer<TOutput>> {
-    private readonly inputSchema: TInput
-    private readonly outputSchema: TOutput
+    /** @internal */
+    _input: TInput
+    /** @internal */
+    _output: TOutput
 
     constructor(input: TInput, output: TOutput) {
         super()
 
-        this.inputSchema = input
-        this.outputSchema = output
+        this._input = input
+        this._output = output
     }
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Infer<TOutput>>> {
-        const parsed = await this.inputSchema.runValidation(input)
+        const parsed = await this._input.runValidation(input)
 
         if (isInvalid(parsed)) {
             return INVALID
@@ -549,7 +546,7 @@ export class PipedSchematic<
             return DIRTY(parsed.value)
         }
 
-        return this.outputSchema.runValidation({
+        return this._output.runValidation({
             value: parsed.value,
             path: input.path,
             parent: input.parent
@@ -557,22 +554,22 @@ export class PipedSchematic<
     }
 }
 export class TransformSchematic<TInput extends AnySchematic, TOutput> extends Schematic<TOutput> {
-    private readonly schema: AnySchematic
-    private readonly transformFn: TransformFn<TInput, TOutput>
+    /** @internal */
+    _input: AnySchematic
+    /** @internal */
+    _transform: TransformFn<TInput, TOutput>
 
     constructor(schema: AnySchematic, transform: TransformFn<TInput, TOutput>) {
         super()
 
-        this.schema = schema
-        this.transformFn = transform
+        this._input = schema
+        this._transform = transform
     }
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<TOutput>> {
         const context = this._getInputContext(input)
-        const result = await this.schema.runValidation(input)
+        const result = await this._input.runValidation(input)
 
         if (isInvalid(result)) {
             return result
@@ -588,7 +585,7 @@ export class TransformSchematic<TInput extends AnySchematic, TOutput> extends Sc
                 return context.path
             }
         }
-        const transformed = await this.transformFn(result.value, transformContext)
+        const transformed = await this._transform(result.value, transformContext)
 
         if (isDirty(result) || dirty) {
             return DIRTY(transformed)
@@ -601,26 +598,22 @@ export class TransformSchematic<TInput extends AnySchematic, TOutput> extends Sc
 export class UnionSchematic<
     T extends Readonly<[AnySchematic, ...AnySchematic[]]>
 > extends Schematic<T[number][typeof OutputSymbol]> {
-    /**
-     * @internal
-     */
-    private readonly schemas: T
+    /** @internal */
+    _schemas: T
 
     constructor(schemas: T) {
         super()
 
-        this.schemas = schemas
+        this._schemas = schemas
     }
 
-    /**
-     * @internal
-     */
+    /** @internal */
     async _parse(
         input: SchematicInput
     ): Promise<SchematicParseReturnType<T[number][typeof OutputSymbol]>> {
         const context = this._getInputContext(input)
         const results = await Promise.all(
-            this.schemas.map((schema) => {
+            this._schemas.map((schema) => {
                 const childContext: SchematicContext = {
                     ...context,
                     parent: null,

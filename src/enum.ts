@@ -25,7 +25,7 @@ export class EnumSchematic<T extends EnumType>
     /** @internal */
     _defaultValue: EnumKeys<T> | (() => EnumKeys<T>) | undefined
     /** @internal */
-    private readonly _enumeration: T
+    _enumeration: T
 
     constructor(enumeration: T) {
         super()

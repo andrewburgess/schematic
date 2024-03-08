@@ -17,9 +17,9 @@ export class RecordSchematic<TKeySchema extends AnySchematic, TValue = any> exte
     Record<string | number, TValue>
 > {
     /** @internal */
-    private readonly _keySchema: TKeySchema
+    _keySchema: TKeySchema
     /** @internal */
-    private readonly _valueSchema: Schematic<TValue>
+    _valueSchema: Schematic<TValue>
 
     constructor(keySchema: TKeySchema, valueSchema: Schematic<TValue>, options?: SchematicOptions) {
         super(options)
