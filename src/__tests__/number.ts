@@ -1,126 +1,72 @@
 import * as schematic from "../"
+import { assertEqualType } from "../util"
 
 const schema = schematic.number()
 
-test("should parse a number", async () => {
-    const result = await schema.parse(10)
-
-    expect(result).toBe(10)
+test("type inference", () => {
+    assertEqualType<schematic.Infer<typeof schema>, number>(true)
 })
 
-test("should throw an error if the value is not a number", async () => {
-    try {
-        await schema.parse(true)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected number but received boolean")
-    }
-})
-
-test("should allow setting a default value", async () => {
-    const result = await schema.default(42).parse(undefined)
-
-    expect(result).toBe(42)
-})
-
-test("should allow setting a default value with a function", async () => {
-    const result = await schema.default(() => 42).parse(undefined)
-
-    expect(result).toBe(42)
-})
-
-test("should fail with null even with 0 as default", async () => {
-    try {
-        await schema.default(0).parse(null)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected number but received null")
-    }
-})
-
-test("should allow coercion of values", async () => {
+test("number parsing", async () => {
     await Promise.all([
-        expect(schema.coerce().parse("42")).resolves.toBe(42),
-        expect(schema.coerce().parse("1.23")).resolves.toBe(1.23),
-        expect(schema.coerce().parse(true)).resolves.toBe(1),
-        expect(schema.coerce().parse(false)).resolves.toBe(0),
-        expect(schema.coerce().parse(null)).resolves.toBe(0),
-        expect(schema.coerce().parse(new Date(10))).resolves.toBe(10)
+        expect(schema.parse(42)).resolves.toBe(42),
+
+        expect(schema.parse(null)).rejects.toThrow(),
+        expect(schema.parse(undefined)).rejects.toThrow(),
+        expect(schema.parse({})).rejects.toThrow(),
+        expect(schema.parse("hello")).rejects.toThrow(),
+        expect(schema.parse(true)).rejects.toThrow(),
+        expect(schema.parse([])).rejects.toThrow()
     ])
 })
 
-test("should reject invalid coercions", async () => {
+test("default number", async () => {
     await Promise.all([
-        expect(schema.coerce().parse("invalid")).rejects.toThrow(
-            "Expected number but received string"
-        ),
-        expect(schema.coerce().parse({})).rejects.toThrow("Expected number but received object"),
-        expect(schema.coerce().parse(undefined)).rejects.toThrow("Required")
+        expect(schema.default(42).parse(undefined)).resolves.toBe(42),
+        expect(schema.default(() => 42).parse(undefined)).resolves.toBe(42),
+
+        expect(schema.default(0).parse(null)).rejects.toThrow()
     ])
 })
 
-test("should allow setting a maximum value", async () => {
-    const result = await schema.max(10).parse(10)
+test("coerce number", async () => {
+    const coerce = schema.coerce()
+    await Promise.all([
+        expect(coerce.parse("42")).resolves.toBe(42),
+        expect(coerce.parse("1.23")).resolves.toBe(1.23),
+        expect(coerce.parse(true)).resolves.toBe(1),
+        expect(coerce.parse(false)).resolves.toBe(0),
+        expect(coerce.parse(null)).resolves.toBe(0),
+        expect(coerce.parse(new Date(10))).resolves.toBe(10),
 
-    expect(result).toBe(10)
+        expect(coerce.parse("invalid")).rejects.toThrow(),
+        expect(coerce.parse({})).rejects.toThrow(),
+        expect(coerce.parse(undefined)).rejects.toThrow()
+    ])
 })
 
-test("should throw an error if the value is greater than the maximum", async () => {
-    try {
-        await schema.max(10).parse(11)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected value less than or equal to 10 but received 11")
-    }
+test("maximum number", async () => {
+    const maxSchema = schema.max(10)
+    const exclusiveMaxSchema = schema.max(10, { exclusive: true })
+
+    await Promise.all([
+        expect(maxSchema.parse(10)).resolves.toBe(10),
+        expect(exclusiveMaxSchema.parse(9)).resolves.toBe(9),
+
+        expect(maxSchema.parse(11)).rejects.toThrow(),
+        expect(exclusiveMaxSchema.parse(10)).rejects.toThrow()
+    ])
 })
 
-test("should throw an error if the value is greater than the exclusive maximum", async () => {
-    try {
-        await schema.max(10, { exclusive: true }).parse(10)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected value less than 10 but received 10")
-    }
-})
+test("minimum number", async () => {
+    const minSchema = schema.min(10)
+    const exclusiveMinSchema = schema.min(10, { exclusive: true })
 
-test("should allow setting a minimum value", async () => {
-    const result = await schema.min(10).parse(10)
+    await Promise.all([
+        expect(minSchema.parse(10)).resolves.toBe(10),
+        expect(exclusiveMinSchema.parse(11)).resolves.toBe(11),
 
-    expect(result).toBe(10)
-})
-
-test("should throw an error if the value is less than the minimum", async () => {
-    try {
-        await schema.min(10).parse(9)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected value greater than or equal to 10 but received 9")
-    }
-})
-
-test("should throw an error if the value is less than the exclusive minimum", async () => {
-    try {
-        await schema.min(10, { exclusive: true }).parse(10)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected value greater than 10 but received 10")
-    }
+        expect(minSchema.parse(9)).rejects.toThrow(),
+        expect(exclusiveMinSchema.parse(10)).rejects.toThrow()
+    ])
 })

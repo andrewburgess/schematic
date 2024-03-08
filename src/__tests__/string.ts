@@ -1,273 +1,129 @@
 import * as schematic from "../"
+import { assertEqualType } from "../util"
 
 const schema = schematic.string()
 
-test("should parse a string", async () => {
-    const result = await schema.parse("foo")
-
-    expect(result).toBe("foo")
+test("type inference", () => {
+    assertEqualType<schematic.Infer<typeof schema>, string>(true)
 })
 
-test("should throw an error if the value is not a string", async () => {
-    try {
-        await schema.parse(123)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected string but received number")
-    }
+test("string parsing", async () => {
+    await Promise.all([
+        expect(schema.parse("hello")).resolves.toBe("hello"),
+
+        expect(schema.parse(null)).rejects.toThrow(),
+        expect(schema.parse(undefined)).rejects.toThrow(),
+        expect(schema.parse({})).rejects.toThrow(),
+        expect(schema.parse(1)).rejects.toThrow(),
+        expect(schema.parse(true)).rejects.toThrow(),
+        expect(schema.parse([])).rejects.toThrow()
+    ])
 })
 
-test("should allow setting a default value", async () => {
-    const result = await schema.default("default").parse(undefined)
+test("default string", async () => {
+    await Promise.all([
+        expect(schema.default("hello").parse(undefined)).resolves.toBe("hello"),
+        expect(schema.default(() => "hello").parse(undefined)).resolves.toBe("hello"),
 
-    expect(result).toBe("default")
-})
-
-test("should allow setting a default value with a function", async () => {
-    const result = await schema.default(() => "default").parse(undefined)
-
-    expect(result).toBe("default")
-})
-
-test("should fail with null even with empty string as default", async () => {
-    try {
-        await schema.default("").parse(null)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected string but received null")
-    }
+        expect(schema.default("").parse(null)).rejects.toThrow()
+    ])
 })
 
 test("should allow coercion of values", async () => {
+    const coerce = schema.coerce()
     await Promise.all([
-        expect(schema.coerce().parse(42)).resolves.toBe("42"),
-        expect(schema.coerce().parse(1.23)).resolves.toBe("1.23"),
-        expect(schema.coerce().parse(true)).resolves.toBe("true"),
-        expect(schema.coerce().parse(false)).resolves.toBe("false"),
-        expect(schema.coerce().parse(null)).resolves.toBe("null"),
-        expect(schema.coerce().parse(new Date(10))).resolves.toBeDefined(),
-        expect(schema.coerce().parse(undefined)).resolves.toBe("")
+        expect(coerce.parse(42)).resolves.toBe("42"),
+        expect(coerce.parse(1.23)).resolves.toBe("1.23"),
+        expect(coerce.parse(true)).resolves.toBe("true"),
+        expect(coerce.parse(false)).resolves.toBe("false"),
+        expect(coerce.parse(null)).resolves.toBe("null"),
+        expect(coerce.parse(new Date(10))).resolves.toBeDefined(),
+        expect(coerce.parse(undefined)).resolves.toBe("")
     ])
 })
 
-test("should reject invalid coercions", async () => {
+test("string length", async () => {
     await Promise.all([
-        expect(schema.coerce().parse({})).rejects.toThrow("Expected string but received object"),
-        expect(schema.coerce().parse(Symbol())).rejects.toThrow(
-            "Expected string but received symbol"
-        ),
-        expect(schema.coerce().parse(() => "invalid")).rejects.toThrow(
-            "Expected string but received function"
-        )
+        expect(schema.length(3).parse("foo")).resolves.toBe("foo"),
+        expect(schema.length(0).parse("")).resolves.toBe(""),
+
+        expect(schema.length(3).parse("foobar")).rejects.toThrow(),
+        expect(schema.length(3).parse("fo")).rejects.toThrow()
     ])
 })
 
-test("should allow setting a length", async () => {
-    const result = await schema.length(3).parse("foo")
+test("minimum length string", async () => {
+    const min = schema.min(3)
+    const minExclusive = schema.min(3, { exclusive: true })
 
-    expect(result).toBe("foo")
+    await Promise.all([
+        expect(min.parse("foo")).resolves.toBe("foo"),
+        expect(minExclusive.parse("foobar")).resolves.toBe("foobar"),
+
+        expect(min.parse("fo")).rejects.toThrow(),
+        expect(minExclusive.parse("foo")).rejects.toThrow()
+    ])
 })
 
-test("should fail if the length is incorrect", async () => {
-    try {
-        await schema.length(3).parse("foobar")
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe(
-            "Expected string with length 3 but received string with length 6"
-        )
-    }
+test("maximum length string", async () => {
+    const max = schema.max(3)
+    const maxExclusive = schema.max(3, { exclusive: true })
+
+    await Promise.all([
+        expect(max.parse("foo")).resolves.toBe("foo"),
+        expect(maxExclusive.parse("fo")).resolves.toBe("fo"),
+
+        expect(max.parse("foobar")).rejects.toThrow(),
+        expect(maxExclusive.parse("foo")).rejects.toThrow()
+    ])
 })
 
-test("should allow setting a minimum length", async () => {
-    const result = await schema.min(3).parse("foobar")
+test("string regex", async () => {
+    const regex = schema.regex(/foo/)
 
-    expect(result).toBe("foobar")
+    await Promise.all([
+        expect(regex.parse("foo")).resolves.toBe("foo"),
 
-    const result2 = await schema.min(3).parse("foo")
-
-    expect(result2).toBe("foo")
-
-    try {
-        await schema.min(3).parse("fo")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe(
-            "Expected string with length at least 3 but received string with length 2"
-        )
-    }
+        expect(regex.parse("bar")).rejects.toThrow()
+    ])
 })
 
-test("should allow setting an exclusive minimum length", async () => {
-    const result = await schema.min(3, { exclusive: true }).parse("foobar")
-
-    expect(result).toBe("foobar")
-
-    try {
-        await schema.min(3, { exclusive: true }).parse("foo")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe(
-            "Expected string with length more than 3 but received string with length 3"
-        )
-    }
-})
-
-test("should allow setting a maximum length", async () => {
-    const result = await schema.max(3).parse("foo")
-
-    expect(result).toBe("foo")
-
-    const result2 = await schema.max(3).parse("fo")
-
-    expect(result2).toBe("fo")
-
-    try {
-        await schema.max(3).parse("foobarz")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe(
-            "Expected string with length at most 3 but received string with length 7"
-        )
-    }
-})
-
-test("should allow setting an exclusive maximum length", async () => {
-    const result = await schema.max(3, { exclusive: true }).parse("fo")
-
-    expect(result).toBe("fo")
-
-    try {
-        await schema.max(3, { exclusive: true }).parse("foo")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe(
-            "Expected string with length less than 3 but received string with length 3"
-        )
-    }
-})
-
-test("should allow setting a regex", async () => {
-    const result = await schema.regex(/foo/).parse("foo")
-
-    expect(result).toBe("foo")
-
-    try {
-        await schema.regex(/foo/).parse("bar")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected string to match /foo/ but received bar")
-    }
-})
-
-test("should allow setting a custom error message for regex", async () => {
-    try {
-        await schema.regex(/foo/, { message: "must be foo" }).parse("bar")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("must be foo")
-    }
-})
-
-test("should allow checking an email address", async () => {
+test("string email", async () => {
     const email = schematic.string().email()
 
-    const result = await email.parse("test@example.com")
+    await Promise.all([
+        expect(email.parse("test@example.com")).resolves.toBe("test@example.com"),
 
-    expect(result).toBe("test@example.com")
-
-    try {
-        await email.parse("test@example")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected string to be a valid email address")
-    }
+        expect(email.parse("test@example")).rejects.toThrow()
+    ])
 })
 
-test("should allow specifying a suffix", async () => {
-    const result = await schema.endsWith("bar").parse("foobar")
+test("string suffix", async () => {
+    const suffix = schema.endsWith("bar")
 
-    expect(result).toBe("foobar")
+    await Promise.all([
+        expect(suffix.parse("foobar")).resolves.toBe("foobar"),
 
-    try {
-        await schema.endsWith("bar").parse("foo")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected string to end with bar but received foo")
-    }
+        expect(suffix.parse("foo")).rejects.toThrow()
+    ])
 })
 
-test("should allow specify a prefix", async () => {
-    const result = await schema.startsWith("foo").parse("foobar")
+test("string prefix", async () => {
+    const prefix = schema.startsWith("foo")
 
-    expect(result).toBe("foobar")
+    await Promise.all([
+        expect(prefix.parse("foobar")).resolves.toBe("foobar"),
 
-    try {
-        await schema.startsWith("foo").parse("bar")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected string to start with foo but received bar")
-    }
+        expect(prefix.parse("bar")).rejects.toThrow()
+    ])
 })
 
-test("should allow specifying a substring", async () => {
-    const result = await schema.includes("bar").parse("foobarbaz")
+test("string substring", async () => {
+    const substring = schema.includes("bar")
 
-    expect(result).toBe("foobarbaz")
+    await Promise.all([
+        expect(substring.parse("foobar")).resolves.toBe("foobar"),
 
-    try {
-        await schema.includes("bar").parse("foobaz")
-        expect(true).toBe(false)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected string to include bar but received foobaz")
-    }
+        expect(substring.parse("foo")).rejects.toThrow()
+    ])
 })

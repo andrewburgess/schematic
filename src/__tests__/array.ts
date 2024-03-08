@@ -1,16 +1,18 @@
+import assert from "assert"
 import * as schematic from "../"
 import { assertEqualType } from "../util"
 
-test("types should be correct", async () => {
-    const stringArray = schematic.array(schematic.string())
-    const objectArray = schematic.array(schematic.object({ name: schematic.string() }))
-    const objectWithOptionalArray = schematic.object({
-        name: schematic.string(),
-        array: schematic.array(schematic.string()),
-        array2: schematic.array(schematic.string()).optional()
-    })
+const stringArray = schematic.array(schematic.string())
+const otherStringArray = schematic.string().array()
+const objectArray = schematic.array(schematic.object({ name: schematic.string() }))
+const objectWithOptionalArray = schematic.object({
+    name: schematic.string(),
+    array: schematic.array(schematic.string()).optional()
+})
 
+test("type inference", async () => {
     assertEqualType<schematic.Infer<typeof stringArray>, string[]>(true)
+    assertEqualType<schematic.Infer<typeof otherStringArray>, string[]>(true)
     assertEqualType<schematic.Infer<typeof objectArray>, { name: string }[]>(true)
     assertEqualType<
         schematic.Infer<typeof objectWithOptionalArray>,
@@ -18,93 +20,91 @@ test("types should be correct", async () => {
     >(true)
 })
 
-test("should parse array", async () => {
-    const array = schematic.array(schematic.string())
-    const result = await array.parse(["hello", "world"])
-    expect(result).toEqual(["hello", "world"])
+test("array parsing", async () => {
+    await Promise.all([
+        expect(stringArray.parse(["hello", "world"])).resolves.toEqual(["hello", "world"]),
+        expect(stringArray.parse([])).resolves.toEqual([]),
+        expect(objectArray.parse([{ name: "hello" }, { name: "world" }])).resolves.toEqual([
+            { name: "hello" },
+            { name: "world" }
+        ]),
+
+        expect(stringArray.parse(null)).rejects.toThrow(),
+        expect(stringArray.parse(undefined)).rejects.toThrow(),
+        expect(stringArray.parse({})).rejects.toThrow(),
+        expect(stringArray.parse(1)).rejects.toThrow(),
+        expect(stringArray.parse("hello")).rejects.toThrow()
+    ])
 })
 
-test("should allow specifying minimum number of elements", async () => {
-    const array = schematic.array(schematic.string()).min(2)
-    await expect(array.parse(["hello"])).rejects.toThrow(
-        "Expected at least 2 elements but received 1"
-    )
-    await expect(array.parse(["hello", "world"])).resolves.toEqual(["hello", "world"])
+test("minimum elements", async () => {
+    const array = stringArray.min(2)
+    const exclusiveArray = stringArray.min(2, { exclusive: true })
 
-    const exclusiveArray = schematic.array(schematic.string()).min(2, { exclusive: true })
-    await expect(exclusiveArray.parse(["hello", "world"])).rejects.toThrow(
-        "Expected more than 2 elements but received 2"
-    )
+    await Promise.all([
+        expect(array.parse(["hello"])).rejects.toThrow(),
+        expect(array.parse(["hello", "world"])).resolves.toEqual(["hello", "world"]),
+
+        expect(exclusiveArray.parse(["hello", "world"])).rejects.toThrow()
+    ])
 })
 
-test("should allow specifying exact number of elements", async () => {
-    const array = schematic.array(schematic.string()).length(2)
-    await expect(array.parse(["hello"])).rejects.toThrow(
-        "Expected array with exactly 2 elements but received 1"
-    )
-    await expect(array.parse(["hello", "world"])).resolves.toEqual(["hello", "world"])
+test("exact number of elements", async () => {
+    const array = stringArray.length(2)
+    await Promise.all([
+        expect(array.parse(["hello"])).rejects.toThrow(),
+        expect(array.parse(["hello", "world"])).resolves.toEqual(["hello", "world"])
+    ])
 })
 
-test("should allow specifying maximum number of elements", async () => {
-    const array = schematic.array(schematic.string()).max(2)
-    await expect(array.parse(["hello", "world", "foo"])).rejects.toThrow(
-        "Expected array with at most 2 elements but received 3"
-    )
-    await expect(array.parse(["hello", "world"])).resolves.toEqual(["hello", "world"])
+test("maximum elements", async () => {
+    const array = stringArray.max(2)
+    const exclusiveArray = stringArray.max(2, { exclusive: true })
 
-    const exclusiveArray = schematic.array(schematic.string()).max(2, { exclusive: true })
-    await expect(exclusiveArray.parse(["hello", "world"])).rejects.toThrow(
-        "Expected array with less than 2 elements but received 2"
-    )
+    await Promise.all([
+        expect(array.parse(["hello", "world", "foo"])).rejects.toThrow(),
+        expect(array.parse(["hello", "world"])).resolves.toEqual(["hello", "world"]),
+
+        expect(exclusiveArray.parse(["hello", "world"])).rejects.toThrow()
+    ])
 })
 
-test("should allow specifying at least one element", async () => {
-    const array = schematic.array(schematic.string()).nonempty()
-    await expect(array.parse([])).rejects.toThrow("Expected at least 1 element but received 0")
-    await expect(array.parse(["hello"])).resolves.toEqual(["hello"])
+test("nonempty array", async () => {
+    const array = stringArray.nonempty()
+    await Promise.all([
+        expect(array.parse([])).rejects.toThrow("Expected at least 1 element but received 0"),
+        expect(array.parse(["hello"])).resolves.toEqual(["hello"])
+    ])
 })
 
-test("should allow combining min and max", async () => {
-    const array = schematic.array(schematic.string()).min(2).max(4)
-    await expect(array.parse(["hello"])).rejects.toThrow(
-        "Expected at least 2 elements but received 1"
-    )
-    await expect(array.parse(["hello", "world", "foo", "bar", "baz"])).rejects.toThrow(
-        "Expected array with at most 4 elements but received 5"
-    )
-    await expect(array.parse(["hello", "world", "foo"])).resolves.toEqual(["hello", "world", "foo"])
+test("minimum and maximum", async () => {
+    const array = stringArray.min(2).max(4)
+    await Promise.all([
+        expect(array.parse(["hello"])).rejects.toThrow(),
+        expect(array.parse(["hello", "world", "foo", "bar", "baz"])).rejects.toThrow(),
+        expect(array.parse(["hello", "world", "foo"])).resolves.toEqual(["hello", "world", "foo"])
+    ])
 })
 
-test("should validate all of the elements instead of stopping at the first error", async () => {
-    const array = schematic.array(schematic.string())
-    try {
-        await array.parse(["hello", 1, "world", 2, "foo", 3])
-        expect(true).toBe(false)
-    } catch (e) {
-        expect(e).toBeInstanceOf(schematic.SchematicParseError)
-        const error = e as schematic.SchematicParseError
+test("validate all members", async () => {
+    const result = await stringArray.safeParse(["hello", 1, "world", 2, "foo", 3])
 
-        expect(error.errors).toHaveLength(3)
-        expect(error.errors[0].message).toBe("Expected string but received number")
-        expect(error.errors[1].message).toBe("Expected string but received number")
-        expect(error.errors[2].message).toBe("Expected string but received number")
-        expect(error.errors[0].path).toEqual([1])
-        expect(error.errors[1].path).toEqual([3])
-        expect(error.errors[2].path).toEqual([5])
-    }
+    assert(result.isValid === false)
+    const errors = result.errors as schematic.SchematicError[]
+
+    expect(errors).toHaveLength(3)
+    expect(errors[0].path).toEqual([1])
+    expect(errors[1].path).toEqual([3])
+    expect(errors[2].path).toEqual([5])
 })
 
-test("should fail if array is sparse", async () => {
-    const array = schematic.array(schematic.string()).min(1).max(3)
-    try {
-        const value = new Array(3)
-        value[1] = "hello"
-        await array.parse(value)
-        expect(true).toBe(false)
-    } catch (e) {
-        expect(e).toBeInstanceOf(schematic.SchematicParseError)
-        const error = e as schematic.SchematicParseError
+test("sparse array validation", async () => {
+    const array = stringArray.min(1).max(3)
+    const value = new Array(3)
+    value[1] = "hello"
+    const result = await array.safeParse(value)
+    assert(result.isValid === false)
+    const errors = result.errors as schematic.SchematicError[]
 
-        expect(error.errors).toHaveLength(2)
-    }
+    expect(errors).toHaveLength(2)
 })

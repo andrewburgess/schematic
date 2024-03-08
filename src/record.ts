@@ -2,7 +2,6 @@ import { addErrorToContext, SchematicInputChild } from "./util"
 import { createInvalidTypeError } from "./error"
 import { Schematic } from "./schematic"
 import {
-    AnySchematic,
     DIRTY,
     INVALID,
     isDirty,
@@ -12,9 +11,10 @@ import {
     SchematicParseReturnType,
     VALID
 } from "./types"
+import { StringSchematic } from "./string"
 
-export class RecordSchematic<TKeySchema extends AnySchematic, TValue = any> extends Schematic<
-    Record<string | number, TValue>
+export class RecordSchematic<TKeySchema extends StringSchematic, TValue = any> extends Schematic<
+    Record<string, TValue>
 > {
     /** @internal */
     _keySchema: TKeySchema

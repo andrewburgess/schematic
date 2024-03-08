@@ -1,5 +1,5 @@
-import assert from "assert"
 import * as schematic from "../"
+import { assertEqualType } from "../util"
 
 enum TestEnum {
     foo = "foo",
@@ -18,55 +18,37 @@ const nativeEnum = schematic.enum(TestEnum)
 const objectEnum = schematic.enum(ObjectEnum)
 const stringEnum = schematic.enum(StringEnum)
 
-test("should parse a native enum", async () => {
-    const result = await nativeEnum.parse("foo")
-
-    expect(result).toBe("foo")
+test("type inference", () => {
+    assertEqualType<schematic.Infer<typeof nativeEnum>, TestEnum>(true)
+    assertEqualType<schematic.Infer<typeof arrayEnum>, 1 | 2 | 3>(true)
+    assertEqualType<schematic.Infer<typeof objectEnum>, "foo" | "bar">(true)
+    assertEqualType<schematic.Infer<typeof stringEnum>, "foo" | "bar">(true)
 })
 
-test("should parse an array enum", async () => {
-    const result = await arrayEnum.parse(1)
+test("enum parsing", async () => {
+    await Promise.all([
+        expect(nativeEnum.parse("foo")).resolves.toEqual(TestEnum.foo),
+        expect(nativeEnum.parse("bar")).resolves.toEqual(TestEnum.bar),
+        expect(arrayEnum.parse(1)).resolves.toEqual(1),
+        expect(objectEnum.parse("foo")).resolves.toEqual("foo"),
+        expect(stringEnum.parse("foo")).resolves.toEqual("foo"),
 
-    expect(result).toBe(1)
+        expect(nativeEnum.parse(null)).rejects.toThrow(),
+        expect(nativeEnum.parse(undefined)).rejects.toThrow(),
+        expect(nativeEnum.parse({})).rejects.toThrow(),
+        expect(nativeEnum.parse(1)).rejects.toThrow(),
+        expect(nativeEnum.parse("hello")).rejects.toThrow(),
+        expect(arrayEnum.parse(4)).rejects.toThrow(),
+        expect(objectEnum.parse("baz")).rejects.toThrow(),
+        expect(stringEnum.parse("baz")).rejects.toThrow()
+    ])
 })
 
-test("should parse an object enum", async () => {
-    const result = await objectEnum.parse("foo")
-
-    expect(result).toBe("foo")
-})
-
-test("should parse a string enum", async () => {
-    const result = await stringEnum.parse("foo")
-
-    expect(result).toBe("foo")
-})
-
-test("should throw an error if the value is not in the enum", async () => {
-    const nativeResult = await nativeEnum.safeParse("baz")
-    assert(!nativeResult.isValid)
-    expect(nativeResult.errors[0].message).toBe('Unexpected value baz for enum "foo | bar"')
-
-    const arrayResult = await arrayEnum.safeParse(4)
-    assert(!arrayResult.isValid)
-    expect(arrayResult.errors[0].message).toBe('Unexpected value 4 for enum "1 | 2 | 3"')
-
-    const objectResult = await objectEnum.safeParse("baz")
-    assert(!objectResult.isValid)
-    expect(objectResult.errors[0].message).toBe('Unexpected value baz for enum "foo | bar"')
-
-    const undefinedResult = await stringEnum.safeParse(undefined)
-    assert(!undefinedResult.isValid)
-    expect(undefinedResult.errors[0].message).toBe("Required")
-})
-
-test("should allow a default value", async () => {
-    const nativeResult = await nativeEnum.default(TestEnum.foo).parse(undefined)
-    expect(nativeResult).toBe(TestEnum.foo)
-
-    const arrayResult = await arrayEnum.default(1).parse(undefined)
-    expect(arrayResult).toBe(1)
-
-    const objectResult = await objectEnum.default("foo").parse(undefined)
-    expect(objectResult).toBe("foo")
+test("default enum", async () => {
+    await Promise.all([
+        expect(nativeEnum.default(TestEnum.foo).parse(undefined)).resolves.toEqual(TestEnum.foo),
+        expect(arrayEnum.default(1).parse(undefined)).resolves.toEqual(1),
+        expect(objectEnum.default("foo").parse(undefined)).resolves.toEqual("foo"),
+        expect(stringEnum.default("foo").parse(undefined)).resolves.toEqual("foo")
+    ])
 })

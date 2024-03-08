@@ -1,11 +1,26 @@
 import * as schematic from "../"
+import { assertEqualType } from "../util"
 
-test("should parse a record", async () => {
-    const schema = schematic.record(schematic.string())
+const schema = schematic.record(schematic.string())
 
-    const result = await schema.parse({ foo: "bar" })
+test("type inference", async () => {
+    assertEqualType<schematic.Infer<typeof schema>, Record<string, string>>(true)
+})
 
-    expect(result).toEqual({ foo: "bar" })
+test("record parsing", async () => {
+    let numberRecord = new Map<number, string>()
+    numberRecord.set(1, "hello")
+    numberRecord.set(2, "world")
+
+    await expect(schema.parse({ foo: "hello", bar: "world" })).resolves.toEqual({
+        foo: "hello",
+        bar: "world"
+    })
+    await expect(schema.parse({})).resolves.toEqual({})
+    await expect(schema.parse(null)).rejects.toThrow()
+    await expect(schema.parse(undefined)).rejects.toThrow()
+    await expect(schema.parse(1)).rejects.toThrow()
+    await expect(schema.parse("hello")).rejects.toThrow()
 })
 
 test("should throw an error if the value is not a record", async () => {
