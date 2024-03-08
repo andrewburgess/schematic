@@ -131,19 +131,31 @@ export abstract class Schematic<T> {
         return addCheck(this, check)
     }
 
-    public nullable(): NullableSchematic<this> {
+    public nullable(this: AnyValueSchematic): AnyValueSchematic
+    public nullable(): NullableSchematic<this>
+    public nullable(): any {
         if (this instanceof NullableSchematic) {
             const shape = this.shape
             return new NullableSchematic(clone(shape))
         }
 
+        if (this instanceof AnyValueSchematic) {
+            return clone(this)
+        }
+
         return new NullableSchematic(clone(this))
     }
 
-    public optional(): OptionalSchematic<this> {
+    public optional(this: AnyValueSchematic): AnyValueSchematic
+    public optional(): OptionalSchematic<this>
+    public optional(): any {
         if (this instanceof OptionalSchematic) {
             const shape = this.shape
             return new OptionalSchematic(clone(shape))
+        }
+
+        if (this instanceof AnyValueSchematic) {
+            return clone(this)
         }
 
         return new OptionalSchematic(clone(this))

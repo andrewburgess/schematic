@@ -37,6 +37,7 @@ import { StringSchematic } from "./string"
 
 export type {
     AnySchematic,
+    AnyValueSchematic,
     BooleanSchematic,
     DateSchematic,
     EnumSchematic,
