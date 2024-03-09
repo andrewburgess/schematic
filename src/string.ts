@@ -16,7 +16,7 @@ import {
     SchematicTestContext,
     VALID
 } from "./types"
-import { addCheck, addErrorToContext, withCoerce, withDefault } from "./util"
+import { addCheck, addErrorToContext, clone, withCoerce, withDefault } from "./util"
 
 const EMAIL_REGEX =
     /^(?!\.)(?!.*\.\.)([A-Z0-9_+-\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\-]*\.)+[A-Z]{2,}$/i
@@ -188,7 +188,21 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
         })
     }
 
+    public toLowerCase() {
+        const cloned = clone(this)
+        cloned._mutations.push((value) => value.toLowerCase())
+        return cloned
+    }
+
     public toUpperCase() {
-        return this.transform((value) => value.toUpperCase())
+        const cloned = clone(this)
+        cloned._mutations.push((value) => value.toUpperCase())
+        return cloned
+    }
+
+    public trim() {
+        const cloned = clone(this)
+        cloned._mutations.push((value) => value.trim())
+        return cloned
     }
 }

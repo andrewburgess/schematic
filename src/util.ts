@@ -37,7 +37,7 @@ export function addCheck<TValue, TSchematic extends Schematic<TValue>>(
 ) {
     const cloned = clone(schematic)
 
-    cloned.checks.push(check as any)
+    cloned._checks.push(check as any)
 
     return cloned
 }

@@ -8,66 +8,31 @@ test("type inference", async () => {
 })
 
 test("record parsing", async () => {
-    let numberRecord = new Map<number, string>()
-    numberRecord.set(1, "hello")
-    numberRecord.set(2, "world")
+    let validMap = new Map()
+    validMap.set("foo", "hello")
+    let invalidMap = new Map()
+    invalidMap.set(1, "hello")
 
     await expect(schema.parse({ foo: "hello", bar: "world" })).resolves.toEqual({
         foo: "hello",
         bar: "world"
     })
     await expect(schema.parse({})).resolves.toEqual({})
+    await expect(schema.parse(validMap)).resolves.toEqual({ foo: "hello" })
+    await expect(schema.parse(invalidMap)).rejects.toThrow()
     await expect(schema.parse(null)).rejects.toThrow()
     await expect(schema.parse(undefined)).rejects.toThrow()
     await expect(schema.parse(1)).rejects.toThrow()
     await expect(schema.parse("hello")).rejects.toThrow()
+    await expect(schema.parse({ foo: 123 })).rejects.toThrow()
+    await expect(schema.parse(["foo", "bar"])).rejects.toThrow()
+
+    const validatedKey = schematic.record(schematic.string().length(5), schematic.number())
+    await expect(validatedKey.parse({ hello: 123 })).resolves.toEqual({ hello: 123 })
+    await expect(validatedKey.parse({ foo: 123 })).rejects.toThrow()
 })
 
-test("should throw an error if the value is not a record", async () => {
-    const schema = schematic.record(schematic.string())
-
-    try {
-        await schema.parse(123)
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected object but received number")
-    }
-})
-
-test("should throw an error if a value in the record is invalid", async () => {
-    const schema = schematic.record(schematic.string())
-
-    try {
-        await schema.parse({ foo: 123 })
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe("Expected string but received number")
-    }
-})
-
-test("should throw an error if a key in the record is invalid", async () => {
-    const schema = schematic.record(schematic.string().length(5), schematic.number())
-
-    try {
-        await schema.parse({ toolong: 123 })
-    } catch (error) {
-        expect(error).toBeInstanceOf(schematic.SchematicParseError)
-        if (!(error instanceof schematic.SchematicParseError)) {
-            return
-        }
-        expect(error.message).toBe(
-            "Expected string with length 5 but received string with length 7"
-        )
-    }
-})
-
-test("should allow complex value schema", async () => {
+test("value parsing", async () => {
     const schema = schematic.record(
         schematic.string(),
         schematic.object({ foo: schematic.number(), bar: schematic.boolean().optional() })
@@ -76,4 +41,20 @@ test("should allow complex value schema", async () => {
     const result = await schema.parse({ bar: { foo: 123 } })
 
     expect(result).toEqual({ bar: { foo: 123 } })
+})
+
+test("parsing with tests", async () => {
+    const testSchema = schematic.record(
+        schematic.string().test((value) => value === "hello"),
+        schematic.number().test((value) => value === 123)
+    )
+
+    await expect(testSchema.parse({ hello: 123 })).resolves.toEqual({ hello: 123 })
+    await expect(testSchema.parse({ hello: 456 })).rejects.toThrow()
+    await expect(testSchema.parse({ foo: 123 })).rejects.toThrow()
+})
+
+test("keySchema and valueSchema access", async () => {
+    await expect(schema.keySchema.parse("hello")).resolves.toBe("hello")
+    await expect(schema.valueSchema.parse("world")).resolves.toBe("world")
 })

@@ -51,7 +51,13 @@ export class RecordSchematic<TKeySchema extends StringSchematic, TValue = any> e
         }
 
         const result: Record<string | number, TValue> = {} as Record<string | number, TValue>
-        const keys = Object.keys(value)
+        let keys: IterableIterator<any> | string[]
+        if (Array.isArray(value) || value instanceof Map) {
+            keys = value.keys()
+        } else {
+            keys = Object.keys(value)
+        }
+
         let status: SchematicParseReturnType["status"] = "valid"
 
         for (const key of keys) {
@@ -66,8 +72,15 @@ export class RecordSchematic<TKeySchema extends StringSchematic, TValue = any> e
                 status = "dirty"
             }
 
+            let itemValue: any
+            if (value instanceof Map) {
+                itemValue = value.get(key)
+            } else {
+                itemValue = value[key]
+            }
+
             const valueResult = await this._valueSchema.runValidation(
-                new SchematicInputChild(context, value[key], context.path, key)
+                new SchematicInputChild(context, itemValue, context.path, key)
             )
 
             if (isInvalid(valueResult)) {

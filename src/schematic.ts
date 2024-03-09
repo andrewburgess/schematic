@@ -38,7 +38,10 @@ export abstract class Schematic<T> {
     /**
      * @internal
      */
-    checks: Array<ValidationCheck<any>> = []
+    _checks: Array<ValidationCheck<any>> = []
+
+    /** @internal */
+    _mutations: Array<TransformFn<Schematic<T>, T>> = []
 
     constructor(options?: SchematicOptions) {
         this.typeErrorMessage = options?.message
@@ -91,9 +94,18 @@ export abstract class Schematic<T> {
             return result
         }
 
+        for (const mutation of this._mutations) {
+            const context = this._getContext(input)
+            const transformed = await mutation(result.value, {
+                addError: (error) => addErrorToContext(context, error),
+                path: context.path
+            })
+            result = VALID(transformed)
+        }
+
         let context: SchematicContext | undefined
         let dirty = false
-        for (const check of this.checks) {
+        for (const check of this._checks) {
             context = this._getContext(input, context)
             const checkContext: SchematicTestContext = {
                 addError: (error) => {
@@ -484,7 +496,7 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
         }
 
         const cloned = clone(shape) as unknown as T
-        cloned.checks = [...cloned.checks, ...this.checks]
+        cloned._checks = [...cloned._checks, ...this._checks]
 
         return cloned
     }
@@ -524,7 +536,7 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
         }
 
         const cloned = clone(shape) as unknown as T
-        cloned.checks = [...cloned.checks, ...this.checks]
+        cloned._checks = [...cloned._checks, ...this._checks]
 
         return cloned
     }

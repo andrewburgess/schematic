@@ -81,7 +81,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
 
     public negative() {
         return addCheck(this, async (value: number, context: SchematicTestContext) => {
-            if (value > 0) {
+            if (value >= 0) {
                 context.addError(createTooBigError(value, 0, false))
             }
         })
@@ -97,7 +97,7 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
 
     public positive() {
         return addCheck(this, async (value: number, context: SchematicTestContext) => {
-            if (value < 0) {
+            if (value <= 0) {
                 context.addError(createTooSmallError(value, 0, false))
             }
         })

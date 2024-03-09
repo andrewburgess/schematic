@@ -19,14 +19,12 @@ test("type inference should be any", () => {
 })
 
 test("should parse any value", async () => {
-    await Promise.all([
-        anySchema.parse(undefined).then((value) => expect(value).toBe(undefined)),
-        anySchema.parse(null).then((value) => expect(value).toBe(null)),
-        anySchema.parse(0).then((value) => expect(value).toBe(0)),
-        anySchema.parse(1).then((value) => expect(value).toBe(1)),
-        anySchema.parse("").then((value) => expect(value).toBe("")),
-        anySchema.parse("hello").then((value) => expect(value).toBe("hello")),
-        anySchema.parse([1]).then((value) => expect(value).toEqual([1])),
-        anySchema.parse({ foo: "bar" }).then((value) => expect(value).toEqual({ foo: "bar" }))
-    ])
+    await anySchema.parse(undefined).then((value) => expect(value).toBe(undefined))
+    await anySchema.parse(null).then((value) => expect(value).toBe(null))
+    await anySchema.parse(0).then((value) => expect(value).toBe(0))
+    await anySchema.parse(1).then((value) => expect(value).toBe(1))
+    await anySchema.parse("").then((value) => expect(value).toBe(""))
+    await anySchema.parse("hello").then((value) => expect(value).toBe("hello"))
+    await anySchema.parse([1]).then((value) => expect(value).toEqual([1]))
+    await anySchema.parse({ foo: "bar" }).then((value) => expect(value).toEqual({ foo: "bar" }))
 })
