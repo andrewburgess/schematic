@@ -1,41 +1,15 @@
 import * as j from "jscodeshift"
 
-const transform: j.Transform = function transformer(file, api, options) {
-    const j = api.jscodeshift
-    const root = j(file.source)
-
-    const zodImport = root.find(j.ImportDeclaration, {
-        source: {
-            value: "zod"
-        }
-    })
-
-    if (zodImport.length === 0) {
-        return file.source
-    }
-
-    let zodImportSpecifier:
-        | j.Collection<j.ImportSpecifier>
-        | j.Collection<j.ImportNamespaceSpecifier> = zodImport.find(j.ImportSpecifier)
-    if (zodImportSpecifier.length === 0) {
-        zodImportSpecifier = zodImport.find(j.ImportNamespaceSpecifier)
-    }
-    const zodName = zodImportSpecifier.find(j.Identifier).get(0).node.name
-
-    if (zodName === undefined) {
-        console.error("Could not find zod name")
-        return file.source
-    }
-
-    // Replace import declaration
+function replaceZodImport(zodImport: j.Collection<j.ImportDeclaration>) {
     zodImport.replaceWith(
         j.importDeclaration(
             [j.importNamespaceSpecifier(j.identifier("schematic"))],
             j.literal("@andrewburgess/schematic")
         )
     )
+}
 
-    // Replace zod calls with schematic calls
+function replaceZodCalls(zodName: string, root: j.Collection<any>) {
     root.find(j.CallExpression, {
         callee: {
             object: {
@@ -56,7 +30,9 @@ const transform: j.Transform = function transformer(file, api, options) {
             console.log("datetime")
         }
     })
+}
 
+function replaceZodInfers(zodName: string, root: j.Collection<any>) {
     root.find(j.TSQualifiedName, {
         left: {
             name: zodName
@@ -65,7 +41,9 @@ const transform: j.Transform = function transformer(file, api, options) {
             name: "infer"
         }
     }).replaceWith(j.tsQualifiedName(j.identifier("schematic"), j.identifier("Infer")))
+}
 
+function replaceZodMemberExpression(zodName: string, root: j.Collection<any>) {
     root.find(j.MemberExpression, {
         object: {
             name: zodName
@@ -79,9 +57,9 @@ const transform: j.Transform = function transformer(file, api, options) {
             propertyNode.replace(j.identifier("SchematicErrorType"))
         }
     })
+}
 
-    root.find(j.Identifier, { name: "addIssue" }).replaceWith(j.identifier("addError"))
-
+function fixObjectFunctionArguments(root: j.Collection<any>) {
     root.find(j.Identifier, (id) =>
         ["omit", "pick", "partial", "required"].includes(id.name)
     ).forEach((node) => {
@@ -101,8 +79,9 @@ const transform: j.Transform = function transformer(file, api, options) {
             }
         }
     })
+}
 
-    // Remove any types that were declared for zod schemas
+function removeZodTypeDefinitions(zodName: string, root: j.Collection<any>) {
     const typeNamesToRemove: string[] = []
     root.find(j.TSTypeReference, {
         typeName: {
@@ -137,6 +116,45 @@ const transform: j.Transform = function transformer(file, api, options) {
     }).forEach((node) => {
         j(node.parent).remove()
     })
+}
+
+const transform: j.Transform = function transformer(file, api, options) {
+    const j = api.jscodeshift
+    const root = j(file.source)
+
+    const zodImport = root.find(j.ImportDeclaration, {
+        source: {
+            value: "zod"
+        }
+    })
+
+    if (zodImport.length === 0) {
+        return file.source
+    }
+
+    let zodImportSpecifier:
+        | j.Collection<j.ImportSpecifier>
+        | j.Collection<j.ImportNamespaceSpecifier> = zodImport.find(j.ImportSpecifier)
+    if (zodImportSpecifier.length === 0) {
+        zodImportSpecifier = zodImport.find(j.ImportNamespaceSpecifier)
+    }
+    const zodName = zodImportSpecifier.find(j.Identifier).get(0).node.name
+
+    if (zodName === undefined) {
+        console.error("Could not find zod name")
+        return file.source
+    }
+
+    replaceZodImport(zodImport)
+    replaceZodCalls(zodName, root)
+    replaceZodInfers(zodName, root)
+    replaceZodMemberExpression(zodName, root)
+
+    root.find(j.Identifier, { name: "addIssue" }).replaceWith(j.identifier("addError"))
+
+    fixObjectFunctionArguments(root)
+
+    removeZodTypeDefinitions(zodName, root)
 
     return root.toSource({ lineTerminator: "\n", quote: "single" })
 }
