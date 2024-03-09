@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Transform",
+            "skipFiles": ["<node_internals>/**"],
+            "program": "${workspaceRoot}/node_modules/jscodeshift/bin/jscodeshift",
+            "stopOnEntry": false,
+            "args": [
+                "--dry",
+                "--print",
+                "-t",
+                "${input:transformFile}",
+                "--parser",
+                "ts",
+                "--run-in-band",
+                "${input:inputFolder}"
+            ],
+            "preLaunchTask": null,
+            "runtimeExecutable": null,
+            "runtimeArgs": ["--nolazy"],
+            "console": "internalConsole",
+            "sourceMaps": true,
+            "outFiles": []
+        }
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "transformFile",
+            "description": "jscodeshift transform file",
+            "default": "${workspaceRoot}\\tools\\zod-to-schematic\\convertZodToSchematic.ts"
+        },
+        {
+            "type": "promptString",
+            "id": "inputFolder",
+            "description": "folder to transform"
+        }
+    ]
+}
