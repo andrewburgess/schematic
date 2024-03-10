@@ -268,6 +268,7 @@ export interface SchematicUnrecognizedValueError extends BaseSchematicError {
 }
 
 export interface SchematicValidationError extends BaseSchematicError {
+    params?: { [key: string]: any }
     type: SchematicErrorType.ValidationError
 }
 
@@ -291,6 +292,8 @@ export type SchematicError = SchematicErrorWithoutMessage & {
 export type SchematicErrorData = RemovePath<SchematicErrorWithoutMessage> & {
     path?: (string | number)[]
 }
+
+export type SchematicTestError = Partial<Omit<SchematicError, "type">>
 
 /**
  * Input data when running a Schematic validation

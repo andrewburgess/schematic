@@ -16,6 +16,7 @@ import {
     SchematicInput,
     SchematicParseReturnType,
     SchematicTestContext,
+    SchematicTestError,
     TestCheck,
     TransformFn,
     VALID,
@@ -234,13 +235,31 @@ export abstract class Schematic<T> {
         return new PipedSchematic(this, targetSchema)
     }
 
-    public test(check: TestCheck<T>, message?: string): this {
+    public test(
+        check: TestCheck<T>,
+        message?: string | SchematicTestError | ((arg: T) => SchematicTestError)
+    ): this {
+        const getErrorData = (value: T): SchematicTestError | undefined => {
+            if (typeof message === "function") {
+                return message(value)
+            }
+
+            if (typeof message === "string") {
+                return {
+                    message
+                }
+            }
+
+            return message
+        }
+
         return this.ensure(async (value, context) => {
             const result = await check(value)
             if (!result) {
                 context.addError({
-                    message: message ?? "Value did not pass test",
-                    type: SchematicErrorType.ValidationError
+                    message: "Value did not pass test",
+                    type: SchematicErrorType.ValidationError,
+                    ...getErrorData(value)
                 })
             }
         })
