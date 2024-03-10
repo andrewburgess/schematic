@@ -18,11 +18,9 @@ test("boolean parsing", async () => {
     await expect(schema.parse("hello")).rejects.toThrow()
 })
 
-test("default value", async () => {
-    await expect(schema.default(true).parse(undefined)).resolves.toBe(true)
-    await expect(schema.default(() => true).parse(undefined)).resolves.toBe(true)
-
-    await expect(schema.default(false).parse(null)).rejects.toThrow()
+test("allowed values", async () => {
+    await expect(schema.allow(true).parse(true)).resolves.toBe(true)
+    await expect(schema.allow(true).parse(false)).rejects.toThrow()
 })
 
 test("coercion", async () => {
@@ -40,4 +38,11 @@ test("coercion", async () => {
     await expect(coerce.parse(NaN)).rejects.toThrow()
     await expect(coerce.parse(Infinity)).rejects.toThrow()
     await expect(coerce.parse(-Infinity)).rejects.toThrow()
+})
+
+test("default value", async () => {
+    await expect(schema.default(true).parse(undefined)).resolves.toBe(true)
+    await expect(schema.default(() => true).parse(undefined)).resolves.toBe(true)
+
+    await expect(schema.default(false).parse(null)).rejects.toThrow()
 })

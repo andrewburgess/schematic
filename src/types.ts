@@ -96,6 +96,14 @@ export interface SchematicOptions {
     message?: string
 }
 
+export interface Allowable<TValue> {
+    _allowed: TValue[]
+    /**
+     * Allow the value to be one of the provided values
+     */
+    allow(values: TValue[], message?: string): Schematic<TValue>
+}
+
 /**
  * A Schematic that will attempt to coerce the input value into the
  * expected type

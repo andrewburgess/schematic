@@ -17,6 +17,11 @@ test("number parsing", async () => {
     await expect(schema.parse([])).rejects.toThrow()
 })
 
+test("allowed values", async () => {
+    await expect(schema.allow(42).parse(42)).resolves.toBe(42)
+    await expect(schema.allow(42).parse(43)).rejects.toThrow()
+})
+
 test("default number", async () => {
     await expect(schema.default(42).parse(undefined)).resolves.toBe(42)
     await expect(schema.default(() => 42).parse(undefined)).resolves.toBe(42)

@@ -1,6 +1,7 @@
 import { createInvalidTypeError, createUnrecognizedValueError } from "./error"
 import { Schematic } from "./schematic"
 import {
+    Allowable,
     Defaultable,
     EnumType,
     INVALID,
@@ -8,7 +9,7 @@ import {
     SchematicParseReturnType,
     VALID
 } from "./types"
-import { addErrorToContext, withDefault } from "./util"
+import { addErrorToContext, withAllow, withDefault } from "./util"
 
 type EnumKeys<TEnum> = TEnum extends readonly (string | number)[]
     ? TEnum[number]
@@ -20,8 +21,10 @@ type EnumKeys<TEnum> = TEnum extends readonly (string | number)[]
 
 export class EnumSchematic<T extends EnumType>
     extends Schematic<EnumKeys<T>>
-    implements Defaultable<EnumKeys<T>>
+    implements Allowable<EnumKeys<T>>, Defaultable<EnumKeys<T>>
 {
+    /** @internal */
+    _allowed: EnumKeys<T>[] = []
     /** @internal */
     _defaultValue: EnumKeys<T> | (() => EnumKeys<T>) | undefined
     /** @internal */
@@ -59,6 +62,10 @@ export class EnumSchematic<T extends EnumType>
 
         addErrorToContext(context, createUnrecognizedValueError(value, this.shape))
         return INVALID
+    }
+
+    allow(values: EnumKeys<T>[], message?: string | undefined): Schematic<EnumKeys<T>> {
+        return withAllow(this, values, message)
     }
 
     public default(defaultValue: EnumKeys<T> | (() => EnumKeys<T>)): EnumSchematic<T> {

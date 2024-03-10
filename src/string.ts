@@ -7,6 +7,7 @@ import {
 } from "./error"
 import { Schematic } from "./schematic"
 import {
+    Allowable,
     Coercable,
     Defaultable,
     INVALID,
@@ -16,12 +17,17 @@ import {
     SchematicTestContext,
     VALID
 } from "./types"
-import { addCheck, addErrorToContext, clone, withCoerce, withDefault } from "./util"
+import { addCheck, addErrorToContext, clone, withAllow, withCoerce, withDefault } from "./util"
 
 const EMAIL_REGEX =
     /^(?!\.)(?!.*\.\.)([A-Z0-9_+-\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\-]*\.)+[A-Z]{2,}$/i
 
-export class StringSchematic extends Schematic<string> implements Coercable, Defaultable<string> {
+export class StringSchematic
+    extends Schematic<string>
+    implements Allowable<string>, Coercable, Defaultable<string>
+{
+    /** @internal */
+    _allowed: string[] = []
     /** @internal */
     _coerce: boolean = false
     /** @internal */
@@ -62,6 +68,10 @@ export class StringSchematic extends Schematic<string> implements Coercable, Def
         }
 
         return VALID(value)
+    }
+
+    allow(values: string | string[], message?: string | undefined): Schematic<string> {
+        return withAllow(this, values, message)
     }
 
     public coerce(): this {

@@ -1,6 +1,7 @@
 import { createInvalidTypeError } from "./error"
 import { Schematic } from "./schematic"
 import {
+    Allowable,
     Coercable,
     Defaultable,
     INVALID,
@@ -8,12 +9,14 @@ import {
     SchematicParseReturnType,
     VALID
 } from "./types"
-import { addErrorToContext, withCoerce, withDefault } from "./util"
+import { addErrorToContext, withAllow, withCoerce, withDefault } from "./util"
 
 export class BooleanSchematic
     extends Schematic<boolean>
-    implements Coercable, Defaultable<boolean>
+    implements Allowable<boolean>, Coercable, Defaultable<boolean>
 {
+    /** @internal */
+    _allowed: boolean[] = []
     /** @internal */
     _coerce: boolean = false
     /** @internal */
@@ -55,6 +58,10 @@ export class BooleanSchematic
         }
 
         return VALID(value)
+    }
+
+    public allow(values: boolean | boolean[], message?: string): BooleanSchematic {
+        return withAllow(this, values, message)
     }
 
     public coerce(): this {

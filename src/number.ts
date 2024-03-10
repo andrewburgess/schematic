@@ -1,6 +1,7 @@
 import { createInvalidTypeError, createTooBigError, createTooSmallError } from "./error"
 import { Schematic } from "./schematic"
 import {
+    Allowable,
     Coercable,
     Defaultable,
     INVALID,
@@ -10,9 +11,14 @@ import {
     SchematicTestContext,
     VALID
 } from "./types"
-import { addCheck, addErrorToContext, withCoerce, withDefault } from "./util"
+import { addCheck, addErrorToContext, withAllow, withCoerce, withDefault } from "./util"
 
-export class NumberSchematic extends Schematic<number> implements Coercable, Defaultable<number> {
+export class NumberSchematic
+    extends Schematic<number>
+    implements Allowable<number>, Coercable, Defaultable<number>
+{
+    /** @internal */
+    _allowed: number[] = []
     /** @internal */
     _coerce: boolean = false
     /** @internal */
@@ -43,6 +49,10 @@ export class NumberSchematic extends Schematic<number> implements Coercable, Def
         }
 
         return VALID(value)
+    }
+
+    allow(values: number | number[], message?: string | undefined): Schematic<number> {
+        return withAllow(this, values, message)
     }
 
     public coerce(): this {

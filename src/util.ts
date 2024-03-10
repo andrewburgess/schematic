@@ -7,7 +7,9 @@ import {
     SchematicInput,
     ValidationCheck,
     type AssertEqual,
-    type Defaultable
+    type Defaultable,
+    Allowable,
+    SchematicErrorType
 } from "./types"
 
 export const assertEqualType = <A, B>(value: AssertEqual<A, B>) => value
@@ -123,6 +125,28 @@ export function mergeValues(
     }
 
     return { isValid: false }
+}
+
+export function withAllow<TValue, TSchematic extends Schematic<TValue> & Allowable<TValue>>(
+    schematic: TSchematic,
+    values: TValue | TValue[],
+    message?: string
+) {
+    const cloned = clone(schematic)
+
+    cloned._allowed.push(...(Array.isArray(values) ? values : [values]))
+    cloned._checks.push((value, context) => {
+        if (!cloned._allowed.includes(value)) {
+            context.addError({
+                type: SchematicErrorType.InvalidExactValue,
+                message: message ?? `Value must be one of: ${cloned._allowed.join(", ")}`,
+                expected: cloned._allowed,
+                received: value
+            })
+        }
+    })
+
+    return cloned
 }
 
 export function withCoerce<TValue, TSchematic extends Schematic<TValue> & Coercable>(

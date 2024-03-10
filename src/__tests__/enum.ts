@@ -44,6 +44,20 @@ test("enum parsing", async () => {
     await expect(stringEnum.parse("baz")).rejects.toThrow()
 })
 
+test("allowed values", async () => {
+    await expect(nativeEnum.allow([TestEnum.foo]).parse(TestEnum.foo)).resolves.toEqual(
+        TestEnum.foo
+    )
+    await expect(arrayEnum.allow([1]).parse(1)).resolves.toEqual(1)
+    await expect(objectEnum.allow(["foo"]).parse("foo")).resolves.toEqual("foo")
+    await expect(stringEnum.allow(["foo"]).parse("foo")).resolves.toEqual("foo")
+
+    await expect(nativeEnum.allow([TestEnum.foo]).parse(TestEnum.bar)).rejects.toThrow()
+    await expect(arrayEnum.allow([1]).parse(2)).rejects.toThrow()
+    await expect(objectEnum.allow(["foo"]).parse("bar")).rejects.toThrow()
+    await expect(stringEnum.allow(["foo"]).parse("bar")).rejects.toThrow()
+})
+
 test("default enum", async () => {
     await expect(nativeEnum.default(TestEnum.foo).parse(undefined)).resolves.toEqual(TestEnum.foo)
     await expect(arrayEnum.default(1).parse(undefined)).resolves.toEqual(1)
