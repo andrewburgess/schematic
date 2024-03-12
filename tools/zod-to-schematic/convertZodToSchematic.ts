@@ -7,7 +7,7 @@ const transform: j.Transform = function transformer(file, api, options) {
     function replaceZodImport(zodImport: j.Collection<j.ImportDeclaration>) {
         zodImport.replaceWith(
             j.importDeclaration(
-                [j.importNamespaceSpecifier(j.identifier("schematic"))],
+                [j.importNamespaceSpecifier(j.identifier("s"))],
                 j.literal("@andrewburgess/schematic")
             )
         )
@@ -22,7 +22,7 @@ const transform: j.Transform = function transformer(file, api, options) {
             }
         }).forEach((node) => {
             const nameNode = node.get("callee").get("object")
-            nameNode.replace(j.identifier("schematic"))
+            nameNode.replace(j.identifier("s"))
 
             const propertyNode = node.get("callee").get("property")
             const propertyName = propertyNode.get("name").value
@@ -58,7 +58,7 @@ const transform: j.Transform = function transformer(file, api, options) {
             right: {
                 name: "infer"
             }
-        }).replaceWith(j.tsQualifiedName(j.identifier("schematic"), j.identifier("Infer")))
+        }).replaceWith(j.tsQualifiedName(j.identifier("s"), j.identifier("Infer")))
 
         root.find(j.TSQualifiedName, {
             left: {
@@ -67,7 +67,7 @@ const transform: j.Transform = function transformer(file, api, options) {
             right: {
                 name: "ZodSchema"
             }
-        }).replaceWith(j.tsQualifiedName(j.identifier("schematic"), j.identifier("Schematic")))
+        }).replaceWith(j.tsQualifiedName(j.identifier("s"), j.identifier("Schematic")))
     }
 
     function replaceZodMemberExpression(zodName: string) {
@@ -77,7 +77,7 @@ const transform: j.Transform = function transformer(file, api, options) {
             }
         }).forEach((node) => {
             const nameNode = node.get("object")
-            nameNode.replace(j.identifier("schematic"))
+            nameNode.replace(j.identifier("s"))
 
             const propertyNode = node.get("property")
             if (propertyNode.get("name").value === "ZodIssueCode") {
