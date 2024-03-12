@@ -29,10 +29,6 @@ const transform: j.Transform = function transformer(file, api, options) {
             if (propertyName === "nativeEnum") {
                 propertyNode.replace(j.identifier("enum"))
             }
-
-            if (propertyName === "datetime") {
-                console.log("datetime")
-            }
         })
 
         root.find(j.Identifier, {
@@ -54,7 +50,7 @@ const transform: j.Transform = function transformer(file, api, options) {
         })
     }
 
-    function replaceZodInfers(zodName: string) {
+    function replaceZodTypeDefinitions(zodName: string) {
         root.find(j.TSQualifiedName, {
             left: {
                 name: zodName
@@ -63,6 +59,15 @@ const transform: j.Transform = function transformer(file, api, options) {
                 name: "infer"
             }
         }).replaceWith(j.tsQualifiedName(j.identifier("schematic"), j.identifier("Infer")))
+
+        root.find(j.TSQualifiedName, {
+            left: {
+                name: zodName
+            },
+            right: {
+                name: "ZodSchema"
+            }
+        }).replaceWith(j.tsQualifiedName(j.identifier("schematic"), j.identifier("Schematic")))
     }
 
     function replaceZodMemberExpression(zodName: string) {
@@ -90,8 +95,13 @@ const transform: j.Transform = function transformer(file, api, options) {
                 (node.callee as any).property &&
                 ["omit", "pick", "partial", "required"].includes((node.callee as any).property.name)
         ).forEach((node) => {
+            const callee = node.node.callee
+            if (!callee || callee.type !== "MemberExpression") {
+                return
+            }
+
             const args: any = node.node.arguments[0]
-            if (args) {
+            if (args && args.properties) {
                 const keys = args.properties.map((arg: any) => arg.key.name)
                 node.node.arguments = [...keys.map((key: string) => j.literal(key))]
             }
@@ -160,7 +170,7 @@ const transform: j.Transform = function transformer(file, api, options) {
 
     replaceZodImport(zodImport)
     replaceZodCalls(zodName)
-    replaceZodInfers(zodName)
+    replaceZodTypeDefinitions(zodName)
     replaceZodReturnTypes(zodName)
     replaceZodMemberExpression(zodName)
 
