@@ -2,26 +2,35 @@ import { addErrorToContext, SchematicInputChild } from "./util"
 import { createInvalidTypeError } from "./error"
 import { Schematic } from "./schematic"
 import {
+    AnySchematic,
     DIRTY,
+    Infer,
     INVALID,
     isDirty,
     isInvalid,
+    RecordKey,
     SchematicInput,
     SchematicOptions,
     SchematicParseReturnType,
     VALID
 } from "./types"
-import { StringSchematic } from "./string"
+import { EnumSchematic } from "./enum"
 
-export class RecordSchematic<TKeySchema extends StringSchematic, TValue = any> extends Schematic<
-    Record<string, TValue>
-> {
+type RecordOutput<TKeySchema extends AnySchematic, TValueSchema extends AnySchematic> =
+    TKeySchema extends EnumSchematic<any>
+        ? Partial<Record<RecordKey<Infer<TKeySchema>>, Infer<TValueSchema | undefined>>>
+        : Record<RecordKey<Infer<TKeySchema>>, Infer<TValueSchema>>
+
+export class RecordSchematic<
+    TKeySchema extends AnySchematic,
+    TValueSchema extends AnySchematic
+> extends Schematic<RecordOutput<TKeySchema, TValueSchema>> {
     /** @internal */
     _keySchema: TKeySchema
     /** @internal */
-    _valueSchema: Schematic<TValue>
+    _valueSchema: TValueSchema
 
-    constructor(keySchema: TKeySchema, valueSchema: Schematic<TValue>, options?: SchematicOptions) {
+    constructor(keySchema: TKeySchema, valueSchema: TValueSchema, options?: SchematicOptions) {
         super(options)
 
         this._keySchema = keySchema
@@ -32,7 +41,7 @@ export class RecordSchematic<TKeySchema extends StringSchematic, TValue = any> e
         return this._keySchema
     }
 
-    public get valueSchema(): Schematic<TValue> {
+    public get valueSchema(): Schematic<TValueSchema> {
         return this._valueSchema
     }
 
@@ -41,7 +50,7 @@ export class RecordSchematic<TKeySchema extends StringSchematic, TValue = any> e
      */
     async _parse(
         input: SchematicInput
-    ): Promise<SchematicParseReturnType<Record<string | number, TValue>>> {
+    ): Promise<SchematicParseReturnType<RecordOutput<TKeySchema, TValueSchema>>> {
         const context = this._getInputContext(input)
         let value = context.data
 
@@ -50,7 +59,10 @@ export class RecordSchematic<TKeySchema extends StringSchematic, TValue = any> e
             return INVALID
         }
 
-        const result: Record<string | number, TValue> = {} as Record<string | number, TValue>
+        const result: RecordOutput<TKeySchema, TValueSchema> = {} as RecordOutput<
+            TKeySchema,
+            TValueSchema
+        >
         let keys: IterableIterator<any> | string[]
         if (Array.isArray(value) || value instanceof Map) {
             keys = value.keys()
@@ -90,7 +102,7 @@ export class RecordSchematic<TKeySchema extends StringSchematic, TValue = any> e
                 status = "dirty"
             }
 
-            result[keyResult.value as any] = valueResult.value
+            result[keyResult.value as Infer<TKeySchema>] = valueResult.value
         }
 
         if (status === "invalid") {

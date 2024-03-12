@@ -143,9 +143,9 @@ export const object = <T extends SchematicObjectShape>(shape: T, opts?: Schemati
  * @param opts Configuration options for record validation
  * @returns Validator of a Record type
  */
-export function record<TKey extends StringSchematic, TValue>(
+export function record<TKey extends AnySchematic, TValue extends AnySchematic>(
     keySchema: TKey,
-    valueSchema: Schematic<TValue>,
+    valueSchema: TValue,
     opts?: SchematicOptions
 ): RecordSchematic<TKey, TValue>
 /**
@@ -154,13 +154,13 @@ export function record<TKey extends StringSchematic, TValue>(
  * @param opts Configuration options for record validation
  * @returns Validator of a Record type
  */
-export function record<TValue>(
-    valueSchema: Schematic<TValue>,
+export function record<TValue extends AnySchematic>(
+    valueSchema: TValue,
     opts?: SchematicOptions
 ): RecordSchematic<StringSchematic, TValue>
 export function record() {
     let [keySchema, valueSchema, options] = Array.from(arguments)
-    if (keySchema instanceof StringSchematic && valueSchema instanceof Schematic) {
+    if (keySchema instanceof Schematic && valueSchema instanceof Schematic) {
         return new RecordSchematic(keySchema, valueSchema, options)
     } else {
         return new RecordSchematic(string(), keySchema, valueSchema)

@@ -4,7 +4,7 @@ import { assertEqualType } from "../util"
 const schema = schematic.record(schematic.string())
 
 test("type inference", async () => {
-    assertEqualType<schematic.Infer<typeof schema>, Record<string, string>>(true)
+    assertEqualType<schematic.Infer<typeof schema>, Partial<Record<string, string>>>(true)
 })
 
 test("record parsing", async () => {
@@ -30,6 +30,13 @@ test("record parsing", async () => {
     const validatedKey = schematic.record(schematic.string().length(5), schematic.number())
     await expect(validatedKey.parse({ hello: 123 })).resolves.toEqual({ hello: 123 })
     await expect(validatedKey.parse({ foo: 123 })).rejects.toThrow()
+
+    enum Keys {
+        hello = "hello",
+        world = "world"
+    }
+    const enumKey = schematic.record(schematic.enum(Keys), schematic.number())
+    await expect(enumKey.parse({ hello: 123 })).resolves.toEqual({ hello: 123 })
 })
 
 test("value parsing", async () => {

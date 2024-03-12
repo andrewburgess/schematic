@@ -3,6 +3,7 @@ import { Schematic } from "./schematic"
 import {
     Allowable,
     Defaultable,
+    EnumKeys,
     EnumType,
     INVALID,
     SchematicInput,
@@ -10,14 +11,6 @@ import {
     VALID
 } from "./types"
 import { addErrorToContext, withAllow, withDefault } from "./util"
-
-type EnumKeys<TEnum> = TEnum extends readonly (string | number)[]
-    ? TEnum[number]
-    : TEnum extends { readonly [key: string]: string | number }
-      ? TEnum[keyof TEnum]
-      : TEnum extends { readonly [key: number]: string | number }
-        ? keyof TEnum
-        : never
 
 export class EnumSchematic<T extends EnumType>
     extends Schematic<EnumKeys<T>>

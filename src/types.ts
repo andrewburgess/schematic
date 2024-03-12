@@ -9,6 +9,13 @@ export type AnySchematic = Schematic<any>
  * Asserts that the input type is assignable to the expected type
  */
 export type AssertEqual<Type, Expected> = Type extends Expected ? true : false
+export type EnumKeys<TEnum> = TEnum extends readonly (string | number)[]
+    ? TEnum[number]
+    : TEnum extends { readonly [key: string]: string | number }
+      ? TEnum[keyof TEnum]
+      : TEnum extends { readonly [key: number]: string | number }
+        ? keyof TEnum
+        : never
 /**
  * A type that can be used as an enum
  */
@@ -58,6 +65,7 @@ type RequiredKeys<Type extends SchematicObjectShape> = Exclude<
     string & keyof Type,
     OptionalKeys<Type>
 >
+export type RecordKey<T> = T extends EnumType ? T : T extends object ? never : string | number
 /**
  * Removes the OptionalSchematic from the type, and returns the underlying
  * Schematic type
