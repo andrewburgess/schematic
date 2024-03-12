@@ -181,8 +181,8 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         shape: TMerge
     ): ObjectSchematic<Extend<T, TShape>> {
         const newShape: any = {
-            ...this.shape,
-            ...shape.shape
+            ...clone(this.shape),
+            ...clone(shape.shape)
         }
 
         return new ObjectSchematic(newShape, this._options) as unknown as ObjectSchematic<
@@ -196,7 +196,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         const shape: any = {}
         for (const key in this.shape) {
             if (!keys.includes(key as any)) {
-                shape[key] = this.shape[key]
+                shape[key] = clone(this.shape[key])
             }
         }
         return new ObjectSchematic(shape, this._options)
@@ -213,9 +213,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
 
         for (const key in this.shape) {
             if (keys.includes(key as any)) {
-                shape[key] = this.shape[key].optional()
+                shape[key] = clone(this.shape[key]).optional()
             } else {
-                shape[key] = this.shape[key]
+                shape[key] = clone(this.shape[key])
             }
         }
 
@@ -227,7 +227,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
     ): ObjectSchematic<Flatten<Pick<T, K>>> {
         const shape: any = {}
         for (const key of keys) {
-            shape[key] = this.shape[key as any]
+            shape[key] = clone(this.shape[key as any])
         }
         return new ObjectSchematic(shape, this._options)
     }
@@ -250,9 +250,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         for (const key in this.shape) {
             if (keys.includes(key as any) && this.shape[key] instanceof OptionalSchematic) {
                 const optional = this.shape[key] as unknown as OptionalSchematic<any>
-                shape[key] = optional.shape
+                shape[key] = clone(optional.shape)
             } else {
-                shape[key] = this.shape[key]
+                shape[key] = clone(this.shape[key])
             }
         }
 
