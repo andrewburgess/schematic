@@ -73,7 +73,7 @@ export class RecordSchematic<
         let status: SchematicParseReturnType["status"] = "valid"
 
         for (const key of keys) {
-            const keyResult = await this._keySchema.runValidation(
+            const keyResult = await this._keySchema._runValidation(
                 new SchematicInputChild(context, key, context.path, key)
             )
             if (isInvalid(keyResult)) {
@@ -91,7 +91,7 @@ export class RecordSchematic<
                 itemValue = value[key]
             }
 
-            const valueResult = await this._valueSchema.runValidation(
+            const valueResult = await this._valueSchema._runValidation(
                 new SchematicInputChild(context, itemValue, context.path, key)
             )
 

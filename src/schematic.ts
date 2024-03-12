@@ -88,7 +88,7 @@ export abstract class Schematic<T> {
     /**
      * @internal
      */
-    async runValidation(input: SchematicInput): Promise<SchematicParseReturnType<T>> {
+    async _runValidation(input: SchematicInput): Promise<SchematicParseReturnType<T>> {
         let result = await this._parse(input)
 
         if (isInvalid(result)) {
@@ -193,7 +193,7 @@ export abstract class Schematic<T> {
             }
         }
 
-        let result = await this.runValidation({ value, path: context.path, parent: context })
+        let result = await this._runValidation({ value, path: context.path, parent: context })
 
         if (isValid(result)) {
             return result.value
@@ -318,7 +318,7 @@ export class ArraySchematic<T extends AnySchematic> extends Schematic<Infer<T>[]
         const results = await Promise.all(
             ([...context.data] as any[]).map((item, i) => {
                 const childContext = new SchematicInputChild(context, item, context.path, i)
-                return this.shape.runValidation(childContext)
+                return this.shape._runValidation(childContext)
             })
         )
 
@@ -420,12 +420,12 @@ export class IntersectionSchematic<
     ): Promise<SchematicParseReturnType<T[typeof OutputSymbol] & U[typeof OutputSymbol]>> {
         const context = this._getInputContext(input)
         const [left, right] = await Promise.all([
-            this._leftSchema.runValidation({
+            this._leftSchema._runValidation({
                 path: context.path,
                 parent: context,
                 value: context.data
             }),
-            this._rightSchema.runValidation({
+            this._rightSchema._runValidation({
                 path: context.path,
                 parent: context,
                 value: context.data
@@ -506,6 +506,17 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
         return shape._parse(input)
     }
 
+    /** @internal */
+    async _runValidation(
+        input: SchematicInput
+    ): Promise<SchematicParseReturnType<Infer<T> | null>> {
+        if (input.value === null) {
+            return VALID(null)
+        }
+
+        return this.shape._runValidation(input)
+    }
+
     public required<T extends AnySchematic = this["shape"]>(): T {
         const shape = this.shape
 
@@ -546,6 +557,17 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
         return shape._parse(input)
     }
 
+    /** @internal */
+    async _runValidation(
+        input: SchematicInput
+    ): Promise<SchematicParseReturnType<Infer<T> | undefined>> {
+        if (input.value === undefined) {
+            return VALID(undefined)
+        }
+
+        return this.shape._runValidation(input)
+    }
+
     public required<T extends AnySchematic = this["shape"]>(): T {
         const shape = this.shape
 
@@ -578,7 +600,7 @@ export class PipedSchematic<
 
     /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<Infer<TOutput>>> {
-        const parsed = await this._input.runValidation(input)
+        const parsed = await this._input._runValidation(input)
 
         if (isInvalid(parsed)) {
             return INVALID
@@ -588,7 +610,7 @@ export class PipedSchematic<
             return DIRTY(parsed.value)
         }
 
-        return this._output.runValidation({
+        return this._output._runValidation({
             value: parsed.value,
             path: input.path,
             parent: input.parent
@@ -611,7 +633,7 @@ export class TransformSchematic<TInput extends AnySchematic, TOutput> extends Sc
     /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<TOutput>> {
         const context = this._getInputContext(input)
-        const result = await this._input.runValidation(input)
+        const result = await this._input._runValidation(input)
 
         if (isInvalid(result)) {
             return result
@@ -665,7 +687,7 @@ export class UnionSchematic<
                     }
                 }
                 return schema
-                    .runValidation({
+                    ._runValidation({
                         value: context.data,
                         path: context.path,
                         parent: childContext

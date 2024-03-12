@@ -96,7 +96,7 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             const schematic = this.shape[key]
             const val = (value as any)?.[key]
 
-            const parsed = await schematic.runValidation(
+            const parsed = await schematic._runValidation(
                 new SchematicInputChild(context, val, context.path, key)
             )
 
