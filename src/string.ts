@@ -27,8 +27,6 @@ export class StringSchematic
     implements Allowable<string>, Coercable, Defaultable<string>
 {
     /** @internal */
-    _allowed: string[] = []
-    /** @internal */
     _coerce: boolean = false
     /** @internal */
     _defaultValue: string | (() => string) | undefined

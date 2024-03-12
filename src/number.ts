@@ -18,8 +18,6 @@ export class NumberSchematic
     implements Allowable<number>, Coercable, Defaultable<number>
 {
     /** @internal */
-    _allowed: number[] = []
-    /** @internal */
     _coerce: boolean = false
     /** @internal */
     _defaultValue: number | (() => number) | undefined

@@ -132,21 +132,19 @@ export function withAllow<TValue, TSchematic extends Schematic<TValue> & Allowab
     values: TValue | TValue[],
     message?: string
 ) {
-    const cloned = clone(schematic)
-
-    cloned._allowed.push(...(Array.isArray(values) ? values : [values]))
-    cloned._checks.push((value, context) => {
-        if (!cloned._allowed.includes(value)) {
+    const allowed = Array.isArray(values) ? values : [values]
+    const check: ValidationCheck<TValue> = (value, context) => {
+        if (!allowed.includes(value)) {
             context.addError({
                 type: SchematicErrorType.InvalidExactValue,
-                message: message ?? `Value must be one of: ${cloned._allowed.join(", ")}`,
-                expected: cloned._allowed,
+                message: message ?? `Value must be one of: ${allowed.join(", ")}`,
+                expected: values,
                 received: value
             })
         }
-    })
+    }
 
-    return cloned
+    return addCheck(schematic, check)
 }
 
 export function withCoerce<TValue, TSchematic extends Schematic<TValue> & Coercable>(

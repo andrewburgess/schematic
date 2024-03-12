@@ -16,8 +16,6 @@ export class BooleanSchematic
     implements Allowable<boolean>, Coercable, Defaultable<boolean>
 {
     /** @internal */
-    _allowed: boolean[] = []
-    /** @internal */
     _coerce: boolean = false
     /** @internal */
     _defaultValue: boolean | (() => boolean) | undefined

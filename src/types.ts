@@ -97,7 +97,6 @@ export interface SchematicOptions {
 }
 
 export interface Allowable<TValue> {
-    _allowed: TValue[]
     /**
      * Allow the value to be one of the provided values
      */

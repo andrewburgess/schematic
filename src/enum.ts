@@ -24,8 +24,6 @@ export class EnumSchematic<T extends EnumType>
     implements Allowable<EnumKeys<T>>, Defaultable<EnumKeys<T>>
 {
     /** @internal */
-    _allowed: EnumKeys<T>[] = []
-    /** @internal */
     _defaultValue: EnumKeys<T> | (() => EnumKeys<T>) | undefined
     /** @internal */
     _enumeration: T
