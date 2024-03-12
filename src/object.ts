@@ -22,7 +22,7 @@ import {
 type Extend<T, U> = Flatten<Omit<T, keyof U> & U>
 type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> = Flatten<
     {
-        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<T[key]>
+        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<any>
             ? T[key]
             : OptionalSchematic<T[key]>
     } & {

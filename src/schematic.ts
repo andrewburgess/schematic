@@ -278,8 +278,7 @@ export abstract class Schematic<T> {
 }
 
 export class AnyValueSchematic extends Schematic<any> {
-    /** @internal */
-    _any = true as const
+    protected readonly _any = true as const
 
     /** @internal */
     async _parse(input: SchematicInput): Promise<SchematicParseReturnType<any>> {
