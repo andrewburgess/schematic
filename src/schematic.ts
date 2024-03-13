@@ -606,10 +606,6 @@ export class PipedSchematic<
             return INVALID
         }
 
-        if (isDirty(parsed)) {
-            return DIRTY(parsed.value)
-        }
-
         return this._output._runValidation({
             value: parsed.value,
             path: input.path,
