@@ -31,7 +31,9 @@ import {
     LiteralSchematic,
     NullableSchematic,
     OptionalSchematic,
+    PipedSchematic,
     Schematic,
+    TransformSchematic,
     UnionSchematic
 } from "./schematic"
 import { StringSchematic } from "./string"
@@ -50,6 +52,7 @@ export type {
     NumberSchematic,
     ObjectSchematic,
     OptionalSchematic,
+    PipedSchematic,
     RecordSchematic,
     Schematic,
     SchematicContext,
@@ -67,6 +70,7 @@ export type {
     SchematicUnrecognizedValueError,
     SchematicValidationError,
     StringSchematic,
+    TransformSchematic,
     UnionSchematic,
     UnknownKeys
 }
