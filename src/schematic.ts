@@ -511,7 +511,7 @@ export class NullableSchematic<T extends AnySchematic> extends Schematic<Infer<T
         input: SchematicInput
     ): Promise<SchematicParseReturnType<Infer<T> | null>> {
         if (input.value === null) {
-            return VALID(null)
+            return super._runValidation(input)
         }
 
         return this.shape._runValidation(input)
@@ -562,7 +562,7 @@ export class OptionalSchematic<T extends AnySchematic> extends Schematic<Infer<T
         input: SchematicInput
     ): Promise<SchematicParseReturnType<Infer<T> | undefined>> {
         if (input.value === undefined) {
-            return VALID(undefined)
+            return super._runValidation(input)
         }
 
         return this.shape._runValidation(input)

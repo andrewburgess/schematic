@@ -211,17 +211,16 @@ test("rejects type if not all properties have defaults and object is undefined",
     expect(result.errors[0].message).toBe('"bar" is required')
 })
 
-test("can create enum from object keys", async () => {
+test("object keys", async () => {
     const base = schematic.object({
         foo: schematic.string(),
         bar: schematic.number()
     })
 
-    const enumSchema = base.keyof()
+    const objectKeys = base.keyof()
 
-    const result = await enumSchema.parse("foo")
-
-    expect(result).toEqual("foo")
+    assertEqualType<typeof objectKeys, "foo" | "bar">(true)
+    expect(objectKeys).toEqual(["foo", "bar"])
 })
 
 test("can merge two object schemas", async () => {

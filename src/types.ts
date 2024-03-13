@@ -1,6 +1,13 @@
-import { AnyValueSchematic, OptionalSchematic, Schematic } from "./schematic"
+import { OptionalSchematic, Schematic } from "./schematic"
 
 // #region Utility Types
+/**
+ * Adds question marks to object output
+ */
+export type AddQuestionMarks<
+    Type extends SchematicObjectShape,
+    Keys extends keyof Type = RequiredKeys<Type>
+> = Pick<Required<Type>, Keys> & Partial<Type>
 /**
  * A Schematic of any type
  */
@@ -40,31 +47,17 @@ export type Infer<TSchematic> = TSchematic extends AnySchematic
  * Infers the object shape output of a Schematic
  */
 export type InferObject<TObject extends SchematicObjectShape> = Flatten<
-    {
-        [key in RequiredKeys<TObject>]: TObject[key][typeof OutputSymbol]
-    } & {
-        [key in OptionalKeys<TObject>]?: TObject[key][typeof OutputSymbol]
-    }
+    AddQuestionMarks<{
+        [key in keyof TObject]: TObject[key][typeof OutputSymbol]
+    }>
 >
-/**
- * Returns the keys of a Schematic that are an OptionalSchematic or
- * an AnyValueSchematic (which means they can be anything)
- */
-type OptionalKeys<Type extends SchematicObjectShape> = {
-    [key in keyof Type]: Type[key] extends OptionalSchematic<any>
-        ? key
-        : Type[key] extends AnyValueSchematic
-          ? key
-          : never
-}[keyof Type]
 /**
  * Returns the keys of a Schematic that are required (any that are not marked
  * as optional)
  */
-type RequiredKeys<Type extends SchematicObjectShape> = Exclude<
-    string & keyof Type,
-    OptionalKeys<Type>
->
+type RequiredKeys<Type extends SchematicObjectShape> = {
+    [k in keyof Type]: undefined extends Type[k] ? never : k
+}[keyof Type]
 export type RecordKey<T> = T extends EnumType ? T : T extends object ? never : string | number
 /**
  * Removes the OptionalSchematic from the type, and returns the underlying

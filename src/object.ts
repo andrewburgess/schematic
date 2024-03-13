@@ -1,6 +1,5 @@
 import { addErrorToContext, assertNever, clone, SchematicInputChild } from "./util"
 import { createInvalidTypeError } from "./error"
-import { EnumSchematic } from "./enum"
 import { NullableSchematic, OptionalSchematic, Schematic } from "./schematic"
 import {
     DIRTY,
@@ -15,29 +14,27 @@ import {
     SchematicObjectShape,
     SchematicOptions,
     SchematicParseReturnType,
-    UnionToTupleString,
     VALID
 } from "./types"
 
 type Extend<T, U> = Flatten<Omit<T, keyof U> & U>
-type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> = Flatten<
-    {
-        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<any>
+type Merge<T, U> = Flatten<T & U>
+type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> = Flatten<{
+    [key in keyof T]: key extends K
+        ? T[key] extends OptionalSchematic<any>
             ? T[key]
             : OptionalSchematic<T[key]>
-    } & {
-        [key in Exclude<keyof T, K>]: T[key]
-    }
->
-type SchematicRequired<T extends SchematicObjectShape, K extends keyof T> = Flatten<
-    {
-        [key in Extract<keyof T, K>]: T[key] extends OptionalSchematic<any>
+        : T[key]
+}>
+type SchematicRequired<T extends SchematicObjectShape, K extends keyof T> = Flatten<{
+    [key in keyof T]: key extends K
+        ? T[key] extends OptionalSchematic<any>
             ? RemoveOptional<T[key]["shape"]>
             : T[key] extends NullableSchematic<any>
               ? NullableSchematic<RemoveOptional<T[key]["shape"]>>
               : T[key]
-    } & Pick<T, Exclude<keyof T, K>>
->
+        : T[key]
+}>
 
 export enum UnknownKeys {
     Allow = "allow",
@@ -172,21 +169,21 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         >
     }
 
-    public keyof(): EnumSchematic<UnionToTupleString<keyof T>> {
+    public keyof(): Flatten<keyof T> {
         const keys = Object.keys(this.shape)
-        return new EnumSchematic(keys) as unknown as EnumSchematic<UnionToTupleString<keyof T>>
+        return keys as unknown as Flatten<keyof T>
     }
 
     public merge<TMerge extends ObjectSchematic<any>, TShape extends TMerge["shape"]>(
         shape: TMerge
-    ): ObjectSchematic<Extend<T, TShape>> {
+    ): ObjectSchematic<Merge<T, TShape>> {
         const newShape: any = {
             ...clone(this.shape),
             ...clone(shape.shape)
         }
 
         return new ObjectSchematic(newShape, this._options) as unknown as ObjectSchematic<
-            Extend<T, TShape>
+            Merge<T, TShape>
         >
     }
 
@@ -199,7 +196,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
                 shape[key] = clone(this.shape[key])
             }
         }
-        return new ObjectSchematic(shape, this._options)
+        return new ObjectSchematic(shape, this._options) as unknown as ObjectSchematic<
+            Flatten<Omit<T, K>>
+        >
     }
 
     public partial<K extends keyof InferObject<T> = keyof InferObject<T>>(
@@ -219,7 +218,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             }
         }
 
-        return new ObjectSchematic(shape, this._options)
+        return new ObjectSchematic(shape, this._options) as unknown as ObjectSchematic<
+            SchematicPartial<T, K>
+        >
     }
 
     public pick<K extends keyof InferObject<T>>(
@@ -229,7 +230,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
         for (const key of keys) {
             shape[key] = clone(this.shape[key as any])
         }
-        return new ObjectSchematic(shape, this._options)
+        return new ObjectSchematic(shape, this._options) as unknown as ObjectSchematic<
+            Flatten<Pick<T, K>>
+        >
     }
 
     public rejectUnknownKeys(): ObjectSchematic<T> {
@@ -256,7 +259,9 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
             }
         }
 
-        return new ObjectSchematic(shape, this._options)
+        return new ObjectSchematic(shape, this._options) as unknown as ObjectSchematic<
+            SchematicRequired<T, K>
+        >
     }
 
     public stripUnknownKeys(): ObjectSchematic<T> {
