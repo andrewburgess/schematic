@@ -56,9 +56,16 @@ export type InferObject<TObject extends SchematicObjectShape> = Flatten<
  * as optional)
  */
 type RequiredKeys<Type extends SchematicObjectShape> = {
-    [k in keyof Type]: undefined extends Type[k] ? never : k
+    [key in keyof Type]: undefined extends Type[key] ? never : key
 }[keyof Type]
-export type RecordKey<T> = T extends EnumType ? T : T extends object ? never : string | number
+/**
+ * Type of keys to be output for a record type
+ */
+export type RecordKey<Type> = Type extends EnumType
+    ? Type
+    : Type extends object
+      ? never
+      : string | number
 /**
  * Removes the OptionalSchematic from the type, and returns the underlying
  * Schematic type
@@ -96,7 +103,9 @@ export interface SchematicOptions {
      */
     message?: string
 }
-
+/**
+ * A Schematic that allows restricting exact values that are allowed
+ */
 export interface Allowable<TValue> {
     /**
      * Allow the value to be one of the provided values
@@ -321,35 +330,37 @@ export type INVALID = { status: "invalid" }
 export const INVALID: INVALID = Object.freeze({ status: "invalid" })
 export const NEVER = INVALID as never
 
-export type DIRTY<T> = { status: "dirty"; value: T }
-export const DIRTY = <T>(value: T): DIRTY<T> => ({ status: "dirty", value })
+export type DIRTY<TValue> = { status: "dirty"; value: TValue }
+export const DIRTY = <TValue>(value: TValue): DIRTY<TValue> => ({ status: "dirty", value })
 
-export type VALID<T> = { status: "valid"; value: T }
-export const VALID = <T>(value: T): VALID<T> => ({ status: "valid", value })
+export type VALID<TValue> = { status: "valid"; value: TValue }
+export const VALID = <TValue>(value: TValue): VALID<TValue> => ({ status: "valid", value })
 
-export type SchematicParseReturnType<T = any> = VALID<T> | DIRTY<T> | INVALID
+export type SchematicParseReturnType<TValue = any> = VALID<TValue> | DIRTY<TValue> | INVALID
 
 export const isInvalid = (result: SchematicParseReturnType<any>): result is INVALID =>
     result.status === "invalid"
-export const isDirty = <T>(result: SchematicParseReturnType<T>): result is DIRTY<T> =>
-    result.status === "dirty"
-export const isValid = <T>(result: SchematicParseReturnType<T>): result is VALID<T> =>
-    result.status === "valid"
+export const isDirty = <TValue>(
+    result: SchematicParseReturnType<TValue>
+): result is DIRTY<TValue> => result.status === "dirty"
+export const isValid = <TValue>(
+    result: SchematicParseReturnType<TValue>
+): result is VALID<TValue> => result.status === "valid"
 
 // #endregion
 
-type UnionToIntersectionFn<T> = (T extends unknown ? (k: () => T) => void : never) extends (
-    k: infer Intersection
-) => void
+type UnionToIntersectionFn<Type> = (
+    Type extends unknown ? (k: () => Type) => void : never
+) extends (k: infer Intersection) => void
     ? Intersection
     : never
 
-type GetUnionLast<T> = UnionToIntersectionFn<T> extends () => infer Last ? Last : never
+type GetUnionLast<Type> = UnionToIntersectionFn<Type> extends () => infer Last ? Last : never
 
-type UnionToTuple<T, Tuple extends unknown[] = []> = [T] extends [never]
+type UnionToTuple<Type, Tuple extends unknown[] = []> = [Type] extends [never]
     ? Tuple
-    : UnionToTuple<Exclude<T, GetUnionLast<T>>, [GetUnionLast<T>, ...Tuple]>
+    : UnionToTuple<Exclude<Type, GetUnionLast<Type>>, [GetUnionLast<Type>, ...Tuple]>
 
-type CastToStringTuple<T> = T extends [string, ...string[]] ? T : never
+type CastToStringTuple<Type> = Type extends [string, ...string[]] ? Type : never
 
-export type UnionToTupleString<T> = CastToStringTuple<UnionToTuple<T>>
+export type UnionToTupleString<Type> = CastToStringTuple<UnionToTuple<Type>>

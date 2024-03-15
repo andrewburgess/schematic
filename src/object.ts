@@ -18,7 +18,6 @@ import {
 } from "./types"
 
 type Extend<T, U> = Flatten<Omit<T, keyof U> & U>
-type Merge<T, U> = Flatten<T & U>
 type SchematicPartial<T extends SchematicObjectShape, K extends keyof T> = Flatten<{
     [key in keyof T]: key extends K
         ? T[key] extends OptionalSchematic<any>
@@ -176,14 +175,14 @@ export class ObjectSchematic<T extends SchematicObjectShape> extends Schematic<I
 
     public merge<TMerge extends ObjectSchematic<any>, TShape extends TMerge["shape"]>(
         shape: TMerge
-    ): ObjectSchematic<Merge<T, TShape>> {
+    ): ObjectSchematic<Extend<T, TShape>> {
         const newShape: any = {
             ...clone(this.shape),
             ...clone(shape.shape)
         }
 
         return new ObjectSchematic(newShape, this._options) as unknown as ObjectSchematic<
-            Merge<T, TShape>
+            Extend<T, TShape>
         >
     }
 
